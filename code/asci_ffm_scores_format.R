@@ -1,10 +1,10 @@
 #  statewide study - asci - ffm
 
 library("raster")
-
+# git test
 #  upload algae data - asci scores downloaded from https://sites.google.com/view/asci/results - Susie
 
-setwd("/Users/katieirving/Documents/git/asci_ffm-master")
+setwd("/Users/katieirving/Documents/git/asci_ffm_2019")
 
 asci_scor <- read.csv("input_data/asci.scores_dec2019.csv", header=T)
 head(asci_scor)
