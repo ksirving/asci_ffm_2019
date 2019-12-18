@@ -1,7 +1,7 @@
 #  statewide study - asci - ffm
 
 library("raster")
-# git test
+
 #  upload algae data - asci scores downloaded from https://sites.google.com/view/asci/results - Susie
 
 setwd("/Users/katieirving/Documents/git/asci_ffm-master")
