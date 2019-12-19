@@ -86,7 +86,42 @@ test_join <- st_join(bmi_sites2, asci_scor_sites, join=st_within, left=F)
 head(test_join)
 
 
-#  pair algae - gauge sites
+######  pair algae - gauge sites
+#  crs same in all data - bmi, algae, gages
+#  match gage with algae temporally - post 2007
+#   match spatially 
+#   count pairs in HUC 12
+# subset full algae dataset to match asci scores data?? i.e. file="output_data/clean_algae.RData"
 
+# HUC 12 data??
 
+load(file="input_data/huc12_sf.rda")
+str(h12)
+
+# add watershed area in sqkm
+h12 <- h12 %>% 
+  mutate(h12_area_sqkm=Shape_Area/1e6)
+
+### 250 ref gauges from Ryan - bmi_ffm_links repo
+
+load(file="input_data/gages_final_250.rda")
+head(gages_final)
+
+# update one col
+gages_final <- gages_final %>% 
+  mutate(REF_END_YEAR=as.integer(REF_END_YEAR))
+
+## what is bmi_clean for?
+# Make Data Spatial -------------------------------------------------------
+
+bmi_clean <- bmi_clean %>% 
+  st_as_sf(coords=c("longitude", "latitude"), crs=4326, remove=F) # make spatial
+
+bmi_all_sites <- bmi_all_sites %>% 
+  st_as_sf(coords=c("lon", "lat"), crs=4326, remove=F) # make spatial
+
+# check projs are same
+st_crs(bmi_clean)
+st_crs(bmi_all_sites)
+st_crs(gages_final)
 
