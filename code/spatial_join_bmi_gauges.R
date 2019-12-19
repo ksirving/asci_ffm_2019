@@ -23,13 +23,13 @@ algae$Latitude <- as.numeric(as.character(algae$Latitude))
 algae$Longitude <- as.numeric(as.character(algae$Longitude))
 
 #  remove NAs
-sum(is.na(algae)) #50 - already NAs but not registering until a number
+sum(is.na(algae)) #50 - already NAs but not registering until formatted to a number
 #  where are the NAs? 
 na_ind <- which(is.na(algae)) 
 algae <- na.omit(algae)
 
 #  spatial point df
-?st_as_sf
+# ?st_as_sf
 str(algae)
 # coordinates(asci_scor_sites) <- c("Latitude","Longitude")
 algae <- algae %>% 
@@ -43,7 +43,7 @@ save(algae, file="output_data/algae_spatial.RData")
 
 #  bug data
 
-load(file="/Users/katieirving/Documents/git/bmi_ffm_links/data_output/bmi_cleaned_all.rda")
+load(file="input_data/bmi_cleaned_all.rda")
 head(bmi_clean)
 dim(bmi_clean)
 
@@ -85,6 +85,8 @@ st_crs(asci_scor_sites)
 test_join <- st_join(bmi_sites2, asci_scor_sites, join=st_within, left=F)
 head(test_join)
 
+
+#  pair algae - gauge sites
 
 
 
