@@ -30,7 +30,7 @@ algae <- na.omit(algae)
 
 #  spatial point df
 # ?st_as_sf
-str(algae)
+# str(algae)
 
 algae <- algae %>% 
   st_as_sf(coords=c("Longitude", "Latitude"), crs=4326, remove=F) # define coords to make spatial
@@ -147,7 +147,7 @@ length(unique(sel_algae_gages$StationID)) #  124 unique algae sites
 
 # how many gages? 39
 sel_gages_algae <- gages_final2 %>% filter(ID %in% sel_algae_gages$ID)
-
+save(sel_gages_algae, file="output_data/paired_gages_algae.RData")
 # select H12s that have points inside:
 sel_h12_algae <- h12[sel_algae_gages, ]
 # although coordinates are longitude/latitude, st_intersects assumes that they are planar
@@ -239,6 +239,7 @@ m2@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
 
 head(algae)
 head(bmi_sites)
+dim(bmi_sites)
 # how many 
 # Add H12 to points to algae and bmi (adds ATTRIBUTES, retains ALL pts if left=TRUE)
 algae_h12 <- st_join(algae, left = FALSE, h12[c("HUC_12","h12_area_sqkm")]) #
@@ -248,8 +249,8 @@ bmi_h12 <- st_join(bmi_sites, left=FALSE, h12[c("HUC_12")]) #%>%
 # select(ID, HUC_12) %>% as_tibble() %>% select(-geometry)
 # class(bmi_h12)
 # class(algae_h12)
-# head(algae_h12)
-# head(bmi_h12)
+head(algae_h12)
+head(bmi_h12)
 # names(bmi_h12)
 # names(algae_h12)
 
@@ -261,10 +262,11 @@ bmi_h12 <- st_join(bmi_sites, left=FALSE, h12[c("HUC_12")]) #%>%
 
 # now join based on H12: how many are in same?
 # sel_algae_bmi <- inner_join(algae_h12, bmi_h12, by="HUC_12") %>% distinct(StationID, .keep_all = T)
-sel_algae_bmi <- st_join(algae_h12, bmi_h12, by="HUC_12", left=F) #%>% distinct(StationID, .keep_all = T)
+sel_algae_bmi <- st_join(algae_h12, bmi_h12, by="HUC_12", left=F) #%>% distinct(StationCode, .keep_all = T)
 
-dim(sel_algae_bmi) #732
-head(sel_algae_bmi)
+# ?st_join
+dim(sel_algae_bmi) # 732
+
 
 # number of unique h12s?
 length(unique(factor(sel_algae_bmi$HUC_12.x))) # 388 unique h12
@@ -276,11 +278,78 @@ length(unique(sel_algae_bmi$StationID)) #  523 unique algae sites
 sel_bmi_algae <- bmi_sites %>% filter(StationCode %in% sel_algae_bmi$StationID)
 dim(sel_bmi_algae)
 
+
 # select H12s that have points inside:
 sel_h12_algae <- h12[sel_algae_bmi, ]
 dim(sel_h12_algae) # 388
 # although coordinates are longitude/latitude, st_intersects assumes that they are planar
 save(sel_h12_algae, file="output_data/selected_h12_contain_algae_bmi.rda")
+
+# count sites that don't match per algae data then per bmi data
+sel_algae_bmi <- st_join(algae_h12, bmi_h12, by="HUC_12") #%>% distinct(StationCode, .keep_all = T)
+sel_bmi_algae <- st_join(bmi_h12, algae_h12,by="HUC_12") #%>% distinct(StationID, .keep_all = T)
+
+?st_join
+dim(sel_algae_bmi) # 2204 - all algae sites, only matched bmi sites - StationCode for only matched sites
+head(sel_algae_bmi)
+dim(sel_bmi_algae) # 3144
+head(sel_bmi_algae) # all bmi sites, only matched algae sites - StationID for only matched sites
+
+# number of unique h12s?
+length(unique(factor(sel_algae_bmi$HUC_12.x))) # 753 unique h12
+length(unique(sel_algae_bmi$StationCode)) # 524 unique bmi
+length(unique(sel_algae_bmi$StationID)) #  1680 unique algae sites
+
+
+# number of unique h12s?
+length(unique(factor(sel_bmi_algae$HUC_12.x))) # 1082 unique h12
+length(unique(sel_bmi_algae$StationCode)) # 2935 unique bmi
+length(unique(sel_bmi_algae$StationID)) #  524 unique algae sites
+
+#  subset the sites that match - to check
+#  by bmi
+match_by_bmi <- unique(sel_algae_bmi$StationCode)
+match_by_bmi # 524
+bmi_u <- sel_algae_bmi$StationID %in% match_by_bmi
+
+match_algae_bmi <- sel_algae_bmi[bmi_u,]
+unique(match_algae_bmi$StationCode) #$StationID# 510 matches, 
+
+#  by algae
+match_by_algae <- unique(sel_bmi_algae$StationID)
+match_by_algae # 524
+
+alg_u <- sel_bmi_algae$StationCode %in% match_by_algae
+
+match_bmi_algae <- sel_bmi_algae[alg_u,]
+unique(match_bmi_algae$StationCode) ## 508-510 matched sites
+
+#  some matched sites missing this 
+
+#  create dataset of unmatched sites - to look at location
+
+#  all sites df 
+# all_bio_sites <- merge(sel_bmi_algae, sel_algae_bmi, by.x="StationCode", by.y="StationID", all=T)
+all_bio_sites <- st_join(sel_algae_bmi, sel_bmi_algae, by="HUC_12")
+head(all_bio_sites)
+dim(all_bio_sites) # 3024
+sel_h12_bio <- h12[all_bio_sites, ]
+dim(sel_h12_bio) # 723
+
+# set background basemaps:
+basemapsList <- c("Esri.WorldTopoMap", "Esri.WorldImagery","Esri.NatGeoWorldMap",
+                  "OpenTopoMap", "OpenStreetMap", 
+                  "CartoDB.Positron", "Stamen.TopOSMFeatures")
+
+mapviewOptions(basemaps=basemapsList)
+
+m1 <- mapview(sel_algae_bmi, col.regions="orange", layer.name="Algae", alpha=0.5, cex=9) +
+  mapview(sel_bmi_algae, col.regions="blue", layer.name="BMI", cex=4) + 
+  mapview(sel_h12_bio, layer="H12", color="dodgerblue", col.regions="cyan", alpha=0.8, lwd=1)
+
+# add measure option  
+m1@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
+
 
 # Get algae COMIDs ----------------------------------------------------------
 #  COMIDS for algae??
@@ -308,33 +377,132 @@ m1@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
 
 ###### continue here!!!!!!!!
 
-# Look for Upstream Sections from Point -----------------------------------
-
-#st_layers("data_output/eflows_bmi.gpkg")
-#gages <- st_read(dsn = "data_output/eflows_bmi.gpkg",layer = "gages_ref_20190315",  as_tibble=TRUE, geometry_column="geometry")
+# GET COMIDS FOR Algae POINTS -----------------------------------
 
 #install.packages("devtools")
-#devtools::install_github("USGS-R/nhdplusTools")
+library(devtools)
+# devtools::install_github("USGS-R/nhdplusTools")
 library(nhdplusTools)
 
-# pick a specific point
-#start_point <- st_sfc(st_point(c(-121.057, 38.852)), crs = 4269)
-#start_comid <- discover_nhdplus_id(st_sfc(sel_gages_sf$geometry)[1])
 
+algae_segs<- sel_algae_gages[,c(2:4)]
+algae_segs$comid <- NA
+head(algae_segs)
+dim(algae_segs)
+
+  
 # get the comid for the BMI points w no comids using purrr
-bmi_segs <- sel_bmi_gages %>% filter(is.na(comid)) %>% select(StationCode, lat, lon, ID, comid)
 
-bmi_missing_coms <- bmi_segs %>% split(.$StationCode) %>% 
+algae_missing_coms <- algae_segs %>% st_drop_geometry() %>% as.data.frame()
+
+bmi_missing_coms <- bmi_missing_coms %>% rowid_to_column() %>% 
+  st_as_sf(coords=c("longitude", "latitude"), crs=4326, remove=F) %>% 
+  st_transform(3310) %>% group_split(rowid) %>%  
   map(~discover_nhdplus_id(.x$geometry))
 
-# flatten
-bmi_segs_df <- bmi_missing_coms %>% flatten_df() %>% t() %>% as.data.frame() %>% rownames_to_column("StationCode") %>% rename("comid"=V1)
-#save(bmi_segs_df, file = "data_output/sel_bmi_missing_comids.rda")
+# one by one:
+#discover_nhdplus_id(bmi_segs$geometry[1]) # 17683290
 
+# flatten
+bmi_segs_df <-bmi_missing_coms %>% flatten_dfc() %>% t() %>% as.data.frame() %>% 
+  rename("comid"=V1) %>% 
+  mutate(StationCode = bmi_segs$StationCode)
+#save(bmi_segs_df, file = "data_output/03_selected_bmi_missing_comids.rda")
+
+# rejoin
 bmi_comids_rev <- bind_rows(bmi_segs_df, bmi_comids)
+
+# save back out:
+save(bmi_comids_rev, file="data_output/03_bmi_all_stations_comids.rda")
+
 # rejoin to get full comids
-sel_bmi_gages <- sel_bmi_gages %>% left_join(., bmi_comids_rev, by="StationCode")
+sel_bmi_gages <- sel_bmi_gages %>% left_join(., bmi_comids_rev, by="StationCode") %>% 
+  # remove old col and rename:
+  select(-comid.x) %>% rename(comid=comid.y)
 summary(sel_bmi_gages)
 
-save(sel_bmi_gages, sel_gages_bmi, file="data_output/sel_bmi_and_gages.rda")
+#save(sel_bmi_gages, sel_gages_bmi, file="data_output/03_selected_bmi_and_gages.rda")
+
+
+# GET UPSTREAM FLOWLINES --------------------------------------------------
+
+## TRANSFORM TO SAME DATUM
+sel_bmi_sf <- st_transform(sel_bmi_gages, crs=3310) # use CA Teal albs metric
+sel_gages_sf <- st_transform(sel_gages_bmi, crs=3310)
+
+save(sel_gages_sf, sel_bmi_sf, file = "data_output/03_selected_gages_bmi_sf_3310.rda")
+
+usgs_segs <- sel_gages_bmi %>% split(.$ID) %>%
+  map(~discover_nhdplus_id(.x$geometry))
+
+# search by a single comid
+# nldi_feature <- list(featureSource = "comid",
+#                      featureID = sel_gages_sf$NHDV1_COMID[[1]])
+# discover_nldi_navigation(nldi_feature)
+# 
+# # get all upstream comid segments
+# flowline_usgs <- navigate_nldi(nldi_feature = nldi_feature,
+#                                 mode = "upstreamMain", 
+#                                 data_source = "")
+
+# use purrr
+coms <- sel_gages_bmi$NHDV2_COMID
+coms_list <- map(coms, ~list(featureSource = "comid", featureID=.x))
+coms_list[[40]] # tst check
+
+# test against function:
+#feat_check <- map(coms_list, ~discover_nldi_navigation(.x))
+
+# test with mainstem segs
+mainstems <- map(coms_list, ~navigate_nldi(nldi_feature = .x,
+                                           mode="upstreamMain",
+                                           data_source = ""))
+
+mainstemsDS <- map(coms_list, ~navigate_nldi(nldi_feature = .x,
+                                             mode="downstreamMain",
+                                             distance_km = 15,
+                                             data_source = ""))
+
+# IT WORKSSSSSS!!!!!
+mapview(mainstems, col.regions="blue", col="blue", legend=F, lwd=2.5) +
+  mapview(mainstemsDS, color="skyblue4", lwd=4, legend=F) + 
+  mapview(sel_bmi_sf, col.regions="orange", legend=F) + 
+  mapview(sel_gages_sf, col.regions="dodgerblue", legend=F, cex=5) 
+
+
+# make a single flat layer
+mainstems_flat_ds <- mainstemsDS %>%
+  set_names(., sel_gages_sf$ID) %>%
+  map2(sel_gages_sf$ID, ~mutate(.x, gageID=.y))
+
+# bind together
+mainstems_ds <- do.call(what = sf:::rbind.sf,
+                        args = mainstems_flat_ds)
+
+# make a single flat layer
+mainstems_flat_us <- mainstems %>%
+  set_names(., sel_gages_sf$ID) %>%
+  map2(sel_gages_sf$ID, ~mutate(.x, gageID=.y))
+
+# bind together
+mainstems_us <- do.call(what = sf:::rbind.sf,
+                        args = mainstems_flat_us)
+
+rm(mainstems_flat_ds, mainstems_flat_us)
+
+save(mainstems_us, mainstems_ds, file = "data_output/03_selected_nhd_flowlines_mainstems.rda")
+
+mapview(mainstems_ds) + mapview(mainstems_us, color="purple")
+
+
+# RELOAD AND MAP ----------------------------------------------------------
+
+load("data_output/03_selected_bmi_and_gages.rda")
+load("data_output/03_selected_nhd_flowlines_mainstems.rda")
+load("data_output/03_selected_h12_contain_bmi_gage.rda")
+
+mapview(mainstems_ds, color="slateblue", legend=F) +
+  mapview(mainstems_us, color="darkblue", legend=F) +
+  mapview(sel_gages_bmi, col.regions="purple", cex=8) + 
+  mapview(sel_bmi_gages, col.regions="orange", cex=6)
 
