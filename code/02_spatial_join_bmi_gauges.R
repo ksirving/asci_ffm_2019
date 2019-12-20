@@ -138,16 +138,18 @@ gages_h12 <- as.data.frame(gages_h12)
 # now join based on H12: how many are in same?
 sel_algae_gages <- inner_join(algae_h12, gages_h12, by="HUC_12") %>% distinct(StationID, .keep_all = T)
 dim(sel_algae_gages) #124
-
+head(sel_algae_gages)
 # number of unique h12s?
 length(unique(factor(sel_algae_gages$HUC_12))) # 39 unique h12
 length(unique(sel_algae_gages$ID)) # 39 unique gages
 length(unique(sel_algae_gages$StationID)) #  124 unique algae sites
 # so 124 possible algae sites, 39 gages, in 39 HUC12's ??????? check this!! 
+save(sel_algae_gages, file="output_data/paired_gages_algae_merged.RData")
 
 # how many gages? 39
 sel_gages_algae <- gages_final2 %>% filter(ID %in% sel_algae_gages$ID)
-save(sel_gages_algae, file="output_data/paired_gages_algae.RData")
+head(sel_gages_algae)
+save(sel_gages_algae, file="output_data/paired_onlygages_algae.RData")
 # select H12s that have points inside:
 sel_h12_algae <- h12[sel_algae_gages, ]
 # although coordinates are longitude/latitude, st_intersects assumes that they are planar
@@ -395,44 +397,39 @@ dim(algae_segs)
 
 algae_missing_coms <- algae_segs %>% st_drop_geometry() %>% as.data.frame()
 
-bmi_missing_coms <- bmi_missing_coms %>% rowid_to_column() %>% 
-  st_as_sf(coords=c("longitude", "latitude"), crs=4326, remove=F) %>% 
-  st_transform(3310) %>% group_split(rowid) %>%  
+algae_missing_coms <-algae_missing_coms %>% rowid_to_column() %>%
+  st_as_sf(coords=c("Longitude", "Latitude"), crs=4326, remove=F) %>%
+  st_transform(3310) %>% group_split(rowid) %>%
   map(~discover_nhdplus_id(.x$geometry))
 
+head(algae_missing_coms)
+algae_missing_coms
 # one by one:
 #discover_nhdplus_id(bmi_segs$geometry[1]) # 17683290
 
 # flatten
-bmi_segs_df <-bmi_missing_coms %>% flatten_dfc() %>% t() %>% as.data.frame() %>% 
+algae_segs_df <-algae_missing_coms %>% flatten_dfc() %>% t() %>% as.data.frame() %>% 
   rename("comid"=V1) %>% 
-  mutate(StationCode = bmi_segs$StationCode)
+  mutate(StationID = algae_segs$StationID)
 #save(bmi_segs_df, file = "data_output/03_selected_bmi_missing_comids.rda")
+algae_segs_df
 
-# rejoin
-bmi_comids_rev <- bind_rows(bmi_segs_df, bmi_comids)
 
 # save back out:
-save(bmi_comids_rev, file="data_output/03_bmi_all_stations_comids.rda")
+save(algae_segs_df, file="output_data/algae_all_stations_comids.rda")
 
-# rejoin to get full comids
-sel_bmi_gages <- sel_bmi_gages %>% left_join(., bmi_comids_rev, by="StationCode") %>% 
-  # remove old col and rename:
-  select(-comid.x) %>% rename(comid=comid.y)
-summary(sel_bmi_gages)
 
-#save(sel_bmi_gages, sel_gages_bmi, file="data_output/03_selected_bmi_and_gages.rda")
 
 
 # GET UPSTREAM FLOWLINES --------------------------------------------------
 
 ## TRANSFORM TO SAME DATUM
-sel_bmi_sf <- st_transform(sel_bmi_gages, crs=3310) # use CA Teal albs metric
-sel_gages_sf <- st_transform(sel_gages_bmi, crs=3310)
+sel_algae_sf <- st_transform(sel_algae_gages, crs=3310) # use CA Teal albs metric
+sel_gages_sf <- st_transform(sel_gages_algae, crs=3310)
 
-save(sel_gages_sf, sel_bmi_sf, file = "data_output/03_selected_gages_bmi_sf_3310.rda")
+save(sel_gages_sf, sel_algae_sf, file = "output_data/selected_gages_algae_sf_3310.rda")
 
-usgs_segs <- sel_gages_bmi %>% split(.$ID) %>%
+usgs_segs <- sel_gages_algae %>% split(.$ID) %>%
   map(~discover_nhdplus_id(.x$geometry))
 
 # search by a single comid
@@ -446,9 +443,9 @@ usgs_segs <- sel_gages_bmi %>% split(.$ID) %>%
 #                                 data_source = "")
 
 # use purrr
-coms <- sel_gages_bmi$NHDV2_COMID
+coms <- sel_gages_algae$NHDV2_COMID
 coms_list <- map(coms, ~list(featureSource = "comid", featureID=.x))
-coms_list[[40]] # tst check
+coms_list[[30]] # tst check
 
 # test against function:
 #feat_check <- map(coms_list, ~discover_nldi_navigation(.x))
@@ -466,9 +463,9 @@ mainstemsDS <- map(coms_list, ~navigate_nldi(nldi_feature = .x,
 # IT WORKSSSSSS!!!!!
 mapview(mainstems, col.regions="blue", col="blue", legend=F, lwd=2.5) +
   mapview(mainstemsDS, color="skyblue4", lwd=4, legend=F) + 
-  mapview(sel_bmi_sf, col.regions="orange", legend=F) + 
+  mapview(sel_algae_sf, col.regions="orange", legend=F) + 
   mapview(sel_gages_sf, col.regions="dodgerblue", legend=F, cex=5) 
-
+#  some sites off the main stem still
 
 # make a single flat layer
 mainstems_flat_ds <- mainstemsDS %>%
@@ -490,19 +487,19 @@ mainstems_us <- do.call(what = sf:::rbind.sf,
 
 rm(mainstems_flat_ds, mainstems_flat_us)
 
-save(mainstems_us, mainstems_ds, file = "data_output/03_selected_nhd_flowlines_mainstems.rda")
+save(mainstems_us, mainstems_ds, file = "output_data/selected_nhd_flowlines_mainstems.rda")
 
 mapview(mainstems_ds) + mapview(mainstems_us, color="purple")
 
 
 # RELOAD AND MAP ----------------------------------------------------------
 
-load("data_output/03_selected_bmi_and_gages.rda")
-load("data_output/03_selected_nhd_flowlines_mainstems.rda")
-load("data_output/03_selected_h12_contain_bmi_gage.rda")
+load("output_data/paired_gages_algae.RData")
+load("output_data/selected_nhd_flowlines_mainstems.rda")
+load("output_data/selected_h12_contain_algae_gage.rda")
 
 mapview(mainstems_ds, color="slateblue", legend=F) +
   mapview(mainstems_us, color="darkblue", legend=F) +
-  mapview(sel_gages_bmi, col.regions="purple", cex=8) + 
-  mapview(sel_bmi_gages, col.regions="orange", cex=6)
+  mapview(sel_gages_algae, col.regions="purple", layer.name="Gages", cex=8) + 
+  mapview(sel_algae_gages, col.regions="orange", layer.name="Algae", cex=6)
 
