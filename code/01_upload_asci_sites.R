@@ -50,7 +50,7 @@ str(algae_sites)
 #  remove duplicates
 asci_scor_sites <- asci_scor_sites[!duplicated(asci_scor_sites),]
 dim(asci_scor_sites) #2625    4 - more sites here than the asci scores df as some samples have 2x reps
-#  remmove NAs
+#  remove NAs
 sum(is.na(asci_scor_sites)) # some NAs from missing data in 0overE - keep MMIs from these sites? progress without but can change
 asci_scor_sites <- na.omit(asci_scor_sites)
 
@@ -64,9 +64,12 @@ asci_scor_sites$SampleID_old <- as.character(asci_scor_sites$SampleID_old)
 
 # use lubridate/tidyr to fix dates to a consistent format
 algae <- separate(asci_scor_sites, col = SampleID_old , into=c("StationID", "MM", "DD", "YY", "Rep", "Rep2"), remove = F) 
-
+head(algae)
 # SampleID: recommended format is "stationcode_sampledate_collectionmethodcode_fieldreplicate" - already set this way in algae
 
+# Warning message:
+  # Expected 6 pieces. Missing pieces filled with `NA` in 2234 rows [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, ...]. 
+# message is about REP2 column - all good - sorted below
 
 # 1679, 1680, 1685, 1686, 1687, 1700, 2199, 2200, 2201, 2202, 2203, 2204, 2205, 2206, 2207, 2208, 2209, 2210, 2211, 2212, ...].
 ## 26 have extra elements to split - need to be kept for StationID
@@ -74,7 +77,7 @@ algae <- separate(asci_scor_sites, col = SampleID_old , into=c("StationID", "MM"
 
 #  all station IDs with the extra element
 weird_station_IDs <- unique(algae[c(1679, 1680, 1685, 1686, 1687, 1700, 2199:2217, 2242), 2])
-
+weird_station_IDs
 # vector with index positions
 wsid <- algae$StationID %in% weird_station_IDs
 #  change values using index
@@ -163,7 +166,7 @@ head(algae)
 
 #  remiove unwated columns and save
 
-algae <- algae[, -c(3:6)]
+algae <- algae[, -c(3:6)] # may change with rep decision
 head(algae)
 save(algae, file="output_data/clean_algae.RData")
 

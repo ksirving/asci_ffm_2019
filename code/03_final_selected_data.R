@@ -40,12 +40,12 @@ mapviewOptions(basemaps=basemapsList)
 
 # Get algae comids ----------------------------------------------------------
 #  merge algae comids and gages
-head(algae_segs_df)
-head(sel_algae_gages)
+# head(algae_segs_df)
+# head(sel_algae_gages)
 
 algae_com_gage <- merge(algae_segs_df, sel_algae_gages, by="StationID")
-head(algae_com_gage) # 124 sites & 39 gages
-dim(algae_com_gage)
+# head(algae_com_gage) # 124 sites & 39 gages
+# dim(algae_com_gage)
 algae_com_gage <- algae_com_gage %>% 
   st_as_sf(coords=c("Latitude", "Longitude"), crs=4326, remove=F) # define coords to make spatial
 save(algae_com_gage, file="output_data/paired_gages_algae_comid.RData" )
@@ -93,18 +93,20 @@ m3@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
 # combine:
 algae_coms <- do.call(what = sf:::rbind.sf,
                     args = list(algae_ds_coms, algae_us_coms))
-class(algae_coms)
-
+# class(algae_coms)
+head(algae_coms)
+# head(algae)
+# sum(is.na(algae))
 #library(DT)
 
 
 # pull algae sites and get list of data, first join with orig full dataset:
-algae_coms_dat <- left_join(algae_coms, algae, by="StationID") %>% 
+algae_coms_dat <- left_join(algae_coms, algae, by="StationID") #%>% 
   # drop NAs (72 sites: is.na(bmi_coms_dat$SampleID)
-  filter(!is.na(SampleID_old))
-
+  #filter(!is.na(SampleID_old))
+head(algae_coms_dat)
 # now look at how many unique samples are avail: n=98 unique samples
-algae_coms_dat %>% as.data.frame() %>% group_by(SampleID_old) %>% distinct(SampleID_old) %>% tally
+algae_coms_dat %>% as.data.frame() %>% group_by(SampleID_old.x) %>% distinct(SampleID_old.x) %>% tally
 
 # now look at how many unique stations: n=74 stations
 algae_coms_dat %>% as.data.frame() %>% group_by(StationID) %>% distinct(StationID) %>% tally

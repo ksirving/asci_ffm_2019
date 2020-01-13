@@ -2,6 +2,12 @@
 #  package to 
 setwd("/Users/katieirving/Documents/git/asci_ffm_2019")
 
+library(tidyverse)
+library(sf)
+library(mapview)
+library(lubridate)
+library(tidyverse)
+
 # library(devtools)
 # devtools::install_github('ceff-tech/ffc_api_client/ffcAPIClient')
 # api client package to extract ffm 
@@ -10,15 +16,9 @@ library(ffcAPIClient) ##
 token <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmaXJzdE5hbWUiOiJLYXRpZSIsImxhc3ROYW1lIjoiSXJ2aW5nIiwiZW1haWwiOiJrYXRpZWlAc2Njd3JwLm9yZyIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNTc2NTQ0MDk2fQ.6fWAyYohV4wxHHSGR4zBeYoTKbUw4YXuIEjQyPB33lU"
 ffcAPIClient::set_token(token) 
 
-#  list gages
-load(file="output_data/paired_gages_algae.RData")
-head(sel_gages_algae) # 39 gauges paired with algae
-
-
 daily_df <- get_usgs_gage_data(10295500)
 head(daily_df)
 results <- ffcAPIClient::get_ffc_results_for_usgs_gage(10295500) 
-
 
 drh_plot <- ffcAPIClient::plot_drh(results)  # includes optional output_path argument to save to file automatically
 
@@ -31,6 +31,166 @@ drh_plot  # display the plot
 
 # upload functional flow metric data - existing 
 
+#  list gages
+load(file="output_data/paired_gages_algae.RData")
+head(sel_gages_algae) # 39 gauges paired with algae
+gages_list <- sel_gages_algae$gage
+sum(is.na(gages_list)) # 2 NAs - data but no gage ID - ill not match with flow metric data. fix later!
+# sel_gages_algae[18,]
+
 # ffmets <- read.csv("input_data/gages_ref_223_period_record.csv")
-# load(file="input_data/ref_gage_annFlow_stats_long.rda")
+load(file="input_data/ref_gage_annFlow_stats_long.rda")
+head(dat_long)
+
+# #  subset flow data to algae gages
+# gages_list %in% dat_long$gage
+# 
+dat_long <- subset(dat_long, gage %in% gages_list)
+head(dat_long)
+
+#  for brts will need to rearrange data by metric
+
+#  subset metric # need to add "T" to the gageID
+flow_long <- dat_long %>% mutate(ID=paste0("T", gage)) %>% 
+  # filter out NA's?
+  filter(!is.na(data)) %>% 
+  ungroup() %>% 
+  select(ID, gage, stream_class, stat:YrRange)
+
+# rm old dataset
+rm(dat_long)
+
+# Avg Metrics for Period of Record ----------------------------------------
+
+# set ID vars for flow metrics
+flow_idvars <- flow_long %>% group_by(ID, stat) %>% distinct(ID, stat, maxYr, minYr)
+
+# now avg for PERIOD OF RECORD for CSCI comparison
+flow_por <- flow_long %>% select(-YrRange, -gage, -year, -stream_class) %>% group_by(ID, stat) %>% 
+  summarize_at(vars(data), mean, na.rm=T) %>% 
+  # rejoin yr ranges
+  left_join(., flow_idvars)
+
+#  also lags abnd annual to calculate - do later!
+
+# unique metrics? (should be 34)
+length(unique(flow_por$stat))
+
+# make wide for join
+flow_por_wide <- flow_por %>% 
+  pivot_wider(names_from=stat, values_from=data)
+#values_fill=list(data=0))
+# can fill missing values with zero if preferred: values_fill=list(data=0)
+
+#  combine with asci
+
+#  algae & gage data
+
+load("output_data/algae_all_stations_comids.rda")
+load("output_data/clean_algae.RData")
+load("output_data/paired_gages_algae_merged.RData")
+load("output_data/selected_nhd_flowlines_mainstems.rda")
+load("output_data/selected_h12_contain_algae_gage.rda")
+load("output_data/paired_onlygages_algae.RData")
+load("output_data/paired_gages_algae_comid.RData")
+
+
+#  mainstem sites upstream/downstream. combine 
+# all stations us of gage:
+algae_us_coms <- algae_com_gage %>% filter(comid %in% mainstems_us$nhdplus_comid)
+
+# all stations 15km downstream on mainstem
+algae_ds_coms <- algae_com_gage %>% filter(comid %in% mainstems_ds$nhdplus_comid)
+
+algae_coms <- do.call(what = sf:::rbind.sf,
+                      args = list(algae_ds_coms, algae_us_coms))
+class(algae_coms)
+class(algae)
+head(algae_coms)
+head(algae)
+sum(is.na(algae))
+
+
+# now look at how many unique samples are avail: n=98 unique samples - 74 here - mistake in code somewhere earlier. check this!!!!!
+algae_coms %>% as.data.frame() %>% group_by(SampleID_old) %>% distinct(SampleID_old) %>% tally
+
+# now look at how many unique stations: n=74 stations
+algae_coms %>% as.data.frame() %>% group_by(StationID) %>% distinct(StationID) %>% tally
+
+
+
+# all stations us of gage:
+algae_us_coms <- algae_com_gage %>% filter(comid %in% mainstems_us$nhdplus_comid)
+
+# all stations 15km downstream on mainstem
+algae_ds_coms <- algae_com_gage %>% filter(comid %in% mainstems_ds$nhdplus_comid)
+
+# combine US and DS
+algae_coms <- rbind(algae_ds_coms, algae_us_coms)
+
+# distinct stations:
+algae_coms %>% st_drop_geometry() %>% distinct(StationID, ID) %>% tally() #74
+algae_coms %>% st_drop_geometry() %>% distinct(comid) %>% tally() #61
+head(algae_coms)
+dim(algae_coms) # 93
+# potential sites:
+#bmi_coms %>% View()
+
+# rm old layer:
+rm(algae_ds_coms, algae_us_coms)
+
+algae_coms_sub <- algae_coms[, 1:15]
+
+# #  look at asci scores
+# 
+# stat_box_data <- function(y, upper_limit = max(algae_coms_sub$asci_percentile)) {
+#   return( 
+#     data.frame(
+#       y = 0.95 * upper_limit,
+#       label = paste('count =', length(y), '\n',
+#                     'mean =', round(mean(y), 1), '\n')
+#     )
+#   )
+# }
+# 
+# head(algae_coms_sub)
+# 
+# 
+# # look at CSCI percentile by Site Status (not avail for all sites)
+# ggplot() + geom_boxplot(data=algae_coms_sub, aes(x=ID, y=asci_percentile))
+# 
+# 
+# # plot asci percentile no NAs
+# ggplot(data=filter(alage_csci, !is.na(SiteStatus)), aes(x=ID, y=asci_percentile)) + 
+#   geom_boxplot(aes(fill=SiteStatus), show.legend = F) +
+#   stat_summary(fun.data=stat_box_data, geom="text",cex=3, hjust=1, vjust=0.9) +
+#   ylab("CSCI (Percentile)") + xlab("Site Status")+
+#   theme_bw()
+# 
+# # plot CSCI percentile w/ NAs
+# ggplot(data=bmi_csci, aes(x=SiteStatus, y=csci_percentile)) + 
+#   geom_boxplot(aes(fill=SiteStatus), show.legend = F) +
+#   stat_summary(fun.data=stat_box_data, geom="text", cex=3, hjust=1, vjust=0.9) +
+#   ylab("CSCI (Percentile)") + xlab("Site Status")+
+#   theme_bw()
+
+#  combine with flow data POR
+
+# Join with Flow POR ------------------------------------------------------
+
+algae_asci_flow_por <- left_join(algae_coms_sub, flow_por_wide, by="ID")
+
+algae_asci_flow_porx <- separate(algae_asci_flow_por, col=sampledate, into =c("YY", "MM", "DD"), remove=F)
+head(algae_asci_flow_porx)
+# filter to sites that have data in the flow time range? # doesn't matter for POR?
+algae_asci_flow_por_overlap <- algae_asci_flow_porx %>%
+  filter(YY > minYr, YY< maxYr)
+
+length(unique(algae_asci_flow_por_overlap$StationID)) # 56 stations
+length(unique(algae_asci_flow_por_overlap$ID)) # 28 gages
+
+save(algae_asci_flow_por, file="output_data/algae_gage_flow_metrics_POR.RData")
+
+
+
 
