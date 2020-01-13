@@ -14,7 +14,7 @@ setwd("/Users/katieirving/Documents/git/asci_ffm_2019")
 
 load(file="output_data/clean_algae.RData") # algae
 head(algae)
-
+dim(algae)
 
 ## convert to spatial for pairing - 1) with bmi (overlap), 2) ref gauges
 
@@ -26,6 +26,16 @@ algae$Longitude <- as.numeric(as.character(algae$Longitude))
 sum(is.na(algae)) #50 - already NAs but not registering until formatted to a number
 #  where are the NAs? 
 na_ind <- which(is.na(algae)) 
+na_ind
+algae[na_ind,]
+
+#  check in unformatted dataset for NAs 
+# 
+# load(file="output_data/clean_algae.RData") # algae
+# head(algae)
+# sum(is.na(algae))
+# algae[na_ind,] # just NAs - full rows
+
 algae <- na.omit(algae)
 
 #  spatial point df
@@ -39,6 +49,7 @@ save(algae, file="output_data/algae_spatial.RData")
 
 
 #  component metrics for Algae - only OoverE & MMI for diatoms and soft bodied
+#  awaiting dataset
 
 #  bug data
 
