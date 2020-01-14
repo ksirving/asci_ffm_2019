@@ -12,16 +12,27 @@ library(raster)
 #  statewide study - asci - ffm
 
 #  upload algae data - asci scores downloaded from https://sites.google.com/view/asci/results - Susie
-
+#  also upload component metrics (for MMI) to merge
 setwd("/Users/katieirving/Documents/git/asci_ffm_2019")
 
+comp_scor <- read.csv("input_data/algae_comp_mets_mmi_jan2020.csv")
 asci_scor <- read.csv("input_data/asci.scores_dec2019.csv", header=T)
 head(asci_scor)
+head(comp_scor)
+dim(asci_scor) # 2588
+dim(comp_scor) # 2579
 #  use MMI (d=diatom, sha=soft algae, hybrid = both)
 
 # change sample id name
 colnames(asci_scor)[1] <- "SampleID"
+colnames(comp_scor)[1] <- "SampleID"
 
+#  merge datasets
+
+asci_comp <- merge(asci_scor, comp_scor, by="SampleID", all=T)
+head(asci_comp)
+dim(asci_comp) # 2588
+asci_scor <- asci_comp
 #  upload site details - for coordinates
 
 algae_raw <- read.csv("input_data/algae.bug.data.10172019.csv", header = T)
@@ -52,9 +63,15 @@ asci_scor_sites <- asci_scor_sites[!duplicated(asci_scor_sites),]
 dim(asci_scor_sites) #2625    4 - more sites here than the asci scores df as some samples have 2x reps
 #  remove NAs
 sum(is.na(asci_scor_sites)) # some NAs from missing data in 0overE - keep MMIs from these sites? progress without but can change
+names(asci_scor_sites)
+asci_scor_sites <- asci_scor_sites[,-c(4,6,8,11)]
 asci_scor_sites <- na.omit(asci_scor_sites)
+dim(asci_scor_sites) 
 
-head(asci_scor_sites)
+# lose some sites if keep in OoverE metrics and salinity - 2260 (365 lost)
+# for now continue with most sites possible - just MMI and DO metrics. 
+# Ask ryan re salinity metric site loss
+
 write.csv(asci_scor_sites, "output_data/asci_scores_coords.csv")
 str(asci_scor_sites)
 # change from factor to character
@@ -74,6 +91,7 @@ head(algae)
 # 1679, 1680, 1685, 1686, 1687, 1700, 2199, 2200, 2201, 2202, 2203, 2204, 2205, 2206, 2207, 2208, 2209, 2210, 2211, 2212, ...].
 ## 26 have extra elements to split - need to be kept for StationID
 
+#  issue here!! number below no longer match - need a universal solution!! Continue tomorrow
 
 #  all station IDs with the extra element
 weird_station_IDs <- unique(algae[c(1679, 1680, 1685, 1686, 1687, 1700, 2199:2217, 2242), 2])
@@ -87,9 +105,13 @@ algae[wsid,4] <- paste(algae$YY[wsid])
 algae[wsid,5] <- paste(algae$Rep[wsid])
 algae[wsid,6] <- paste(algae$Rep2[wsid])
 
+head(algae)
+algae[which(is.na(algae$sampledate)),]
+which(is.na(algae$sampledate))
  # add sample date
 algae$sampledate = ymd(paste0(algae$YY,"-", algae$MM, "-",algae$DD))
-
+# Warning message:
+#   42 failed to parse. 
 #  remove Rep 2 column 
 
 algae$Rep2 <- NULL
