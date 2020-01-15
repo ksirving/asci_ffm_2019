@@ -23,12 +23,12 @@ library(lubridate)
 # load("data_output/00_bmi_cleaned_all.rda")
 # load("data_output/03_bmi_all_stations_comids.rda")
 
-load("output_data/algae_all_stations_comids.rda")
-load("output_data/clean_algae.RData")
-load("output_data/paired_gages_algae_merged.RData")
-load("output_data/selected_nhd_flowlines_mainstems.rda")
-load("output_data/selected_h12_contain_algae_gage.rda")
-load("output_data/paired_onlygages_algae.RData")
+load("output_data/algae_all_stations_comids.rda") # algae_segs_df - algae sites and comids
+load("output_data/clean_algae.RData") # algae - all data
+load("output_data/paired_gages_algae_merged.RData") # sel_algae_gages - 126 algae sites, 40 gages
+load("output_data/selected_nhd_flowlines_mainstems.rda") # mainstems_us, mainstems_ds mainstems us/ds
+load("output_data/selected_h12_contain_algae_gage.rda") # sel_h12s_algae - huc 12s
+load("output_data/paired_only_gages_algae.RData") # sel_gages_algae paired gages - no algae data
 
 # load mapview bases
 # set background basemaps:
@@ -42,13 +42,16 @@ mapviewOptions(basemaps=basemapsList)
 #  merge algae comids and gages
 # head(algae_segs_df)
 # head(sel_algae_gages)
+# unique(sel_algae_gages$ID) # 40
+# unique(sel_algae_gages$gage) # 40
 
 algae_com_gage <- merge(algae_segs_df, sel_algae_gages, by="StationID")
-# head(algae_com_gage) # 124 sites & 39 gages
-# dim(algae_com_gage)
+# head(algae_com_gage) # 126 sites & 40 gages
+dim(algae_com_gage)
 algae_com_gage <- algae_com_gage %>% 
   st_as_sf(coords=c("Latitude", "Longitude"), crs=4326, remove=F) # define coords to make spatial
-save(algae_com_gage, file="output_data/paired_gages_algae_comid.RData" )
+
+save(algae_com_gage, file="output_data/paired_gages_algae_comid.RData" ) # gages us and ds mets
 # all stations us of gage:
 algae_us_coms <- algae_com_gage %>% filter(comid %in% mainstems_us$nhdplus_comid)
 
@@ -88,35 +91,37 @@ m3@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
 # m4@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
 
 
-# Combine BMI US and DS ---------------------------------------------------
+# Combine algae US and DS ---------------------------------------------------
 
 # combine:
 algae_coms <- do.call(what = sf:::rbind.sf,
                     args = list(algae_ds_coms, algae_us_coms))
 # class(algae_coms)
 head(algae_coms)
+dim(algae_coms)
 # head(algae)
 # sum(is.na(algae))
 #library(DT)
 
+save(algae_coms, file="output_data/gages_comids_algaemets.RData")
 
-# pull algae sites and get list of data, first join with orig full dataset:
-algae_coms_dat <- left_join(algae_coms, algae, by="StationID") #%>% 
-  # drop NAs (72 sites: is.na(bmi_coms_dat$SampleID)
-  #filter(!is.na(SampleID_old))
-head(algae_coms_dat)
+# # pull algae sites and get list of data, first join with orig full dataset:
+# algae_coms_dat <- left_join(algae_coms, algae, by="StationID") #%>% 
+#   # drop NAs (72 sites: is.na(bmi_coms_dat$SampleID)
+#   #filter(!is.na(SampleID_old))
+# head(algae_coms_dat)
 # now look at how many unique samples are avail: n=98 unique samples
-algae_coms_dat %>% as.data.frame() %>% group_by(SampleID_old.x) %>% distinct(SampleID_old.x) %>% tally
-
-# now look at how many unique stations: n=74 stations
-algae_coms_dat %>% as.data.frame() %>% group_by(StationID) %>% distinct(StationID) %>% tally
+# algae_coms_dat %>% as.data.frame() %>% group_by(SampleID_old.x) %>% distinct(SampleID_old.x) %>% tally
+# 
+# # now look at how many unique stations: n=74 stations
+# algae_coms_dat %>% as.data.frame() %>% group_by(StationID) %>% distinct(StationID) %>% tally
 
 
 # Get algae comids ----------------------------------------------------------
 
 # all stations us of gage:
 algae_us_coms <- algae_com_gage %>% filter(comid %in% mainstems_us$nhdplus_comid)
-
+algae_us_coms
 # all stations 15km downstream on mainstem
 algae_ds_coms <- algae_com_gage %>% filter(comid %in% mainstems_ds$nhdplus_comid)
 
@@ -134,16 +139,17 @@ head(algae_coms)
 rm(algae_ds_coms, algae_us_coms)
 
 
-# Check against CSCI Scores -----------------------------------------------
+# Check against asci Scores -----------------------------------------------
 # 
 # # subset full df for only asci scores
-# head(algae_com_gage) # want stationid, comid, sampleid, lat, long, all metrics
-# names(algae_com_gage)
-# asci_mets <- algae_com_gage[,c(1:12)]
-# head(asci_mets)
-# asci_mets <- as.data.frame(asci_mets)
+head(algae_com_gage) # want stationid, comid, sampleid, lat, long, all metrics
+names(algae_com_gage)
+asci_mets <- algae_com_gage[,c(1:12)]
+head(asci_mets)
+dim(asci_mets) #126
+asci_mets <- as.data.frame(asci_mets)
 # 
-# # match against existing sites:
+# # # match against existing sites:
 # algae_asci <- inner_join(algae_coms,asci_mets, by=c("StationID"))
 # head(algae_asci)
 # algae_asci <- left_join(algae_asci, algae[,c(3:4)], by="Stationid")

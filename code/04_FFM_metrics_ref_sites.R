@@ -32,22 +32,24 @@ drh_plot  # display the plot
 # upload functional flow metric data - existing 
 
 #  list gages
-load(file="output_data/paired_gages_algae.RData")
-head(sel_gages_algae) # 39 gauges paired with algae
+load(file="output_data/paired_only_gages_algae.RData")
+# head(sel_gages_algae) # 40 gauges paired with algae
+# dim(sel_gages_algae)
 gages_list <- sel_gages_algae$gage
-sum(is.na(gages_list)) # 2 NAs - data but no gage ID - ill not match with flow metric data. fix later!
+sum(is.na(gages_list)) # 3 NAs - data but no gage ID - ill not match with flow metric data. fix later!
 # sel_gages_algae[18,]
 
 # ffmets <- read.csv("input_data/gages_ref_223_period_record.csv")
 load(file="input_data/ref_gage_annFlow_stats_long.rda")
 head(dat_long)
+dim(dat_long) # 258944      
 
 # #  subset flow data to algae gages
 # gages_list %in% dat_long$gage
 # 
 dat_long <- subset(dat_long, gage %in% gages_list)
 head(dat_long)
-
+dim(dat_long) # 64804     
 #  for brts will need to rearrange data by metric
 
 #  subset metric # need to add "T" to the gageID
@@ -64,14 +66,53 @@ rm(dat_long)
 
 # set ID vars for flow metrics
 flow_idvars <- flow_long %>% group_by(ID, stat) %>% distinct(ID, stat, maxYr, minYr)
-
-# now avg for PERIOD OF RECORD for CSCI comparison
+# flow_idvars
+# now avg for PERIOD OF RECORD for ASCI comparison
 flow_por <- flow_long %>% select(-YrRange, -gage, -year, -stream_class) %>% group_by(ID, stat) %>% 
   summarize_at(vars(data), mean, na.rm=T) %>% 
   # rejoin yr ranges
   left_join(., flow_idvars)
 
-#  also lags abnd annual to calculate - do later!
+#  also lags and annual to calculate - do later!
+
+# Get Flow Record only in Same Year/lag as algae Sites ----------------------
+
+# need to pull 2 years prior, 1 year prior, and same year as BMI site data
+
+load("output_data/paired_gages_algae_merged.RData") # sel_algae_gages - 126 algae sites, 40 gages
+head(sel_algae_gages)
+asci_mets <- sel_algae_gages[,c(1:11)] 
+head(asci_mets)
+
+asci_mets <- separate(asci_mets, col = sampledate , into=c("YYYY", "MM", "DD"), remove = F) 
+head(asci_mets)
+
+# make vector of years and algae_ids
+asci_yrs <- asci_mets %>% group_by(SampleID_old) %>% pull(YYYY) %>% unique()
+asci_yrs <- as.numeric(as.character(asci_yrs))
+(asci_yrs_2 <- asci_yrs - 2) # set lag 2
+(asci_yrs_1 <- asci_yrs - 1) # set lag 1
+
+# now combine and order:
+asci_years <- combine(asci_yrs, asci_yrs_1, asci_yrs_2) %>% sort() %>% unique() #  
+#asci_years # 2007-2015
+
+# rm old files
+rm(asci_yrs, asci_yrs_1, asci_yrs_2)
+
+# now match with flow data (only goes through 2016)
+flow_by_years_asci <- flow_long %>% 
+  filter(year %in% asci_years) # 1993:2017
+
+# make wide
+flow_by_years_asci_wide <- flow_by_years_asci %>% 
+  pivot_wider(names_from=stat, values_from=data)
+
+flow_by_years_asci_wide %>% distinct(ID) %>% dim # should be 37 gages match same years
+
+# save flow data out for annual match
+save(flow_by_years_asci, flow_by_years_asci_wide, file="output_data/04_selected_flow_by_years_of_asci.RData")
+
 
 # unique metrics? (should be 34)
 length(unique(flow_por$stat))
@@ -91,7 +132,7 @@ load("output_data/clean_algae.RData")
 load("output_data/paired_gages_algae_merged.RData")
 load("output_data/selected_nhd_flowlines_mainstems.rda")
 load("output_data/selected_h12_contain_algae_gage.rda")
-load("output_data/paired_onlygages_algae.RData")
+load("output_data/paired_only_gages_algae.RData")
 load("output_data/paired_gages_algae_comid.RData")
 
 
@@ -104,15 +145,12 @@ algae_ds_coms <- algae_com_gage %>% filter(comid %in% mainstems_ds$nhdplus_comid
 
 algae_coms <- do.call(what = sf:::rbind.sf,
                       args = list(algae_ds_coms, algae_us_coms))
-class(algae_coms)
-class(algae)
-head(algae_coms)
-head(algae)
-sum(is.na(algae))
 
+unique(algae_coms$SampleID_old)
+dim(algae_coms)
 
-# now look at how many unique samples are avail: n=98 unique samples - 74 here - mistake in code somewhere earlier. check this!!!!!
-algae_coms %>% as.data.frame() %>% group_by(SampleID_old) %>% distinct(SampleID_old) %>% tally
+# now look at how many unique samples are avail: n=93 unique samples - 74 here - mistake in code somewhere earlier. check this!!!!!
+algae_coms %>% as.data.frame() %>% group_by(StationID) %>% distinct(StationID) %>% tally
 
 # now look at how many unique stations: n=74 stations
 algae_coms %>% as.data.frame() %>% group_by(StationID) %>% distinct(StationID) %>% tally
@@ -191,6 +229,8 @@ length(unique(algae_asci_flow_por_overlap$ID)) # 28 gages
 
 save(algae_asci_flow_por, file="output_data/algae_gage_flow_metrics_POR.RData")
 
+#  calculate lag 1 & 2 and annual
 
+## continue here!!!!!!
 
 

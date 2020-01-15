@@ -92,6 +92,7 @@ library(spatstat)
 ### 250 ref gauges from Ryan - bmi_ffm_links repo
 load(file="input_data/gages_final_250.rda")
 # head(gages_final)
+# dim(gages_final)
 # str(gages_final)
 
 # update one col
@@ -142,25 +143,25 @@ gages_h12 <- st_join(gages_final2, left=FALSE, h12[c("HUC_12")]) #%>%
 
 #  change to dataframe
 gages_h12 <- as.data.frame(gages_h12)
-# select not working
-# Error in (function (classes, fdef, mtable)  : 
-# unable to find an inherited method for function ‘select’ for signature ‘"sf"’
+
 
 # now join based on H12: how many are in same?
 sel_algae_gages <- inner_join(algae_h12, gages_h12, by="HUC_12") %>% distinct(StationID, .keep_all = T)
-dim(sel_algae_gages) #124
+dim(sel_algae_gages) #126
 head(sel_algae_gages)
-# number of unique h12s?
-length(unique(factor(sel_algae_gages$HUC_12))) # 39 unique h12
-length(unique(sel_algae_gages$ID)) # 39 unique gages
-length(unique(sel_algae_gages$StationID)) #  124 unique algae sites
-# so 124 possible algae sites, 39 gages, in 39 HUC12's ??????? check this!! 
-save(sel_algae_gages, file="output_data/paired_gages_algae_merged.RData")
 
-# how many gages? 39
+# number of unique h12s?
+length(unique(factor(sel_algae_gages$HUC_12))) # 40 unique h12
+length(unique(sel_algae_gages$ID)) # 40 unique gages
+length(unique(sel_algae_gages$StationID)) #  126 unique algae sites
+# so 126 possible algae sites, 40 gages, in 40 HUC12's 
+save(sel_algae_gages, file="output_data/paired_gages_algae_merged.RData") #algae data plus gage and huc12 
+
+# how many gages? 40
 sel_gages_algae <- gages_final2 %>% filter(ID %in% sel_algae_gages$ID)
 head(sel_gages_algae)
-save(sel_gages_algae, file="output_data/paired_onlygages_algae.RData")
+dim(sel_gages_algae) 
+save(sel_gages_algae, file="output_data/paired_only_gages_algae.RData") # same but only the paired gages n=40
 # select H12s that have points inside:
 sel_h12_algae <- h12[sel_algae_gages, ]
 # although coordinates are longitude/latitude, st_intersects assumes that they are planar
@@ -278,23 +279,23 @@ head(bmi_h12)
 sel_algae_bmi <- st_join(algae_h12, bmi_h12, by="HUC_12", left=F) #%>% distinct(StationCode, .keep_all = T)
 
 # ?st_join
-dim(sel_algae_bmi) # 732
+dim(sel_algae_bmi) # 738
 
 
 # number of unique h12s?
-length(unique(factor(sel_algae_bmi$HUC_12.x))) # 388 unique h12
-length(unique(sel_algae_bmi$StationCode)) # 523 unique bmi
-length(unique(sel_algae_bmi$StationID)) #  523 unique algae sites
-# so 523 possible algae sites, 523 bmi sites, in 388 HUC12's ??????? check this!! 
+length(unique(factor(sel_algae_bmi$HUC_12.x))) # 391 unique h12
+length(unique(sel_algae_bmi$StationCode)) # 529 unique bmi
+length(unique(sel_algae_bmi$StationID)) #  529 unique algae sites
+# so 529 possible algae sites, 529 bmi sites, in 391 HUC12's ??????? check this!! 
 
-# how many bmi? 508
+# how many bmi? 514
 sel_bmi_algae <- bmi_sites %>% filter(StationCode %in% sel_algae_bmi$StationID)
 dim(sel_bmi_algae)
 
 
 # select H12s that have points inside:
 sel_h12_algae <- h12[sel_algae_bmi, ]
-dim(sel_h12_algae) # 388
+dim(sel_h12_algae) # 918
 # although coordinates are longitude/latitude, st_intersects assumes that they are planar
 save(sel_h12_algae, file="output_data/selected_h12_contain_algae_bmi.rda")
 
@@ -302,40 +303,40 @@ save(sel_h12_algae, file="output_data/selected_h12_contain_algae_bmi.rda")
 sel_algae_bmi <- st_join(algae_h12, bmi_h12, by="HUC_12") #%>% distinct(StationCode, .keep_all = T)
 sel_bmi_algae <- st_join(bmi_h12, algae_h12,by="HUC_12") #%>% distinct(StationID, .keep_all = T)
 
-?st_join
-dim(sel_algae_bmi) # 2204 - all algae sites, only matched bmi sites - StationCode for only matched sites
+# ?st_join
+dim(sel_algae_bmi) # 2214 - all algae sites, only matched bmi sites - StationCode for only matched sites
 head(sel_algae_bmi)
 dim(sel_bmi_algae) # 3144
 head(sel_bmi_algae) # all bmi sites, only matched algae sites - StationID for only matched sites
 
 # number of unique h12s?
-length(unique(factor(sel_algae_bmi$HUC_12.x))) # 753 unique h12
-length(unique(sel_algae_bmi$StationCode)) # 524 unique bmi
-length(unique(sel_algae_bmi$StationID)) #  1680 unique algae sites
+length(unique(factor(sel_algae_bmi$HUC_12.x))) # 757 unique h12
+length(unique(sel_algae_bmi$StationCode)) # 530 unique bmi
+length(unique(sel_algae_bmi$StationID)) #  1690 unique algae sites
 
 
 # number of unique h12s?
 length(unique(factor(sel_bmi_algae$HUC_12.x))) # 1082 unique h12
 length(unique(sel_bmi_algae$StationCode)) # 2935 unique bmi
-length(unique(sel_bmi_algae$StationID)) #  524 unique algae sites
+length(unique(sel_bmi_algae$StationID)) #  530 unique algae sites
 
 #  subset the sites that match - to check
 #  by bmi
 match_by_bmi <- unique(sel_algae_bmi$StationCode)
-match_by_bmi # 524
+match_by_bmi # 530
 bmi_u <- sel_algae_bmi$StationID %in% match_by_bmi
 
 match_algae_bmi <- sel_algae_bmi[bmi_u,]
-unique(match_algae_bmi$StationCode) #$StationID# 510 matches, 
+unique(match_algae_bmi$StationCode) #$StationID# 517 matches, 
 
 #  by algae
 match_by_algae <- unique(sel_bmi_algae$StationID)
-match_by_algae # 524
+match_by_algae # 530
 
 alg_u <- sel_bmi_algae$StationCode %in% match_by_algae
 
 match_bmi_algae <- sel_bmi_algae[alg_u,]
-unique(match_bmi_algae$StationCode) ## 508-510 matched sites
+unique(match_bmi_algae$StationCode) ## 514 matched sites
 
 #  some matched sites missing this 
 
@@ -345,9 +346,9 @@ unique(match_bmi_algae$StationCode) ## 508-510 matched sites
 # all_bio_sites <- merge(sel_bmi_algae, sel_algae_bmi, by.x="StationCode", by.y="StationID", all=T)
 all_bio_sites <- st_join(sel_algae_bmi, sel_bmi_algae, by="HUC_12")
 head(all_bio_sites)
-dim(all_bio_sites) # 3024
+dim(all_bio_sites) # 3034
 sel_h12_bio <- h12[all_bio_sites, ]
-dim(sel_h12_bio) # 723
+dim(sel_h12_bio) # 757
 
 # set background basemaps:
 basemapsList <- c("Esri.WorldTopoMap", "Esri.WorldImagery","Esri.NatGeoWorldMap",
@@ -388,8 +389,6 @@ m1@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
 
 
 
-###### continue here!!!!!!!!
-
 # GET COMIDS FOR Algae POINTS -----------------------------------
 
 #install.packages("devtools")
@@ -401,7 +400,7 @@ library(nhdplusTools)
 algae_segs<- sel_algae_gages[,c(2:4)]
 algae_segs$comid <- NA
 head(algae_segs)
-dim(algae_segs)
+dim(algae_segs) #126
 
   
 # get the comid for the BMI points w no comids using purrr
