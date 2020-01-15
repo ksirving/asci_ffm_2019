@@ -30,15 +30,15 @@ colnames(comp_scor)[1] <- "SampleID"
 #  merge datasets
 
 asci_comp <- merge(asci_scor, comp_scor, by="SampleID", all=T)
-head(asci_comp)
-dim(asci_comp) # 2588
+# head(asci_comp)
+# dim(asci_comp) # 2588
 asci_scor <- asci_comp
 #  upload site details - for coordinates
 
 algae_raw <- read.csv("input_data/algae.bug.data.10172019.csv", header = T)
-head(algae_raw)
-names(algae_raw)
-dim(algae_raw)# 130753     26
+# head(algae_raw)
+# names(algae_raw)
+# dim(algae_raw)# 130753     26
 
 #  get coords
 algae_sites <- algae_raw[,c(1,17,18)]
@@ -53,20 +53,21 @@ str(asci_scor)
 
 
 asci_scor_sites <- merge(algae_sites, asci_scor, by.x="SampleID_old", by.y="SampleID")
-head(asci_scor_sites)
-dim(asci_scor_sites) # 128764      4
-str(algae_sites)
+# head(asci_scor_sites)
+# dim(asci_scor_sites) # 128764      4
+# str(algae_sites)
 #  lose ~2K Samples
 
 #  remove duplicates
 asci_scor_sites <- asci_scor_sites[!duplicated(asci_scor_sites),]
 dim(asci_scor_sites) #2625    4 - more sites here than the asci scores df as some samples have 2x reps
 #  remove NAs
-sum(is.na(asci_scor_sites)) # some NAs from missing data in 0overE - keep MMIs from these sites? progress without but can change
+sum(is.na(asci_scor_sites)) # 969 some NAs from missing data in 0overE - keep MMIs from these sites? progress without but can change
 names(asci_scor_sites)
-asci_scor_sites <- asci_scor_sites[,-c(4,6,8,11)]
+asci_scor_sites <- asci_scor_sites[,-c(4,6,8,11)] # keep 11 to keep salinity
 asci_scor_sites <- na.omit(asci_scor_sites)
-dim(asci_scor_sites) 
+# dim(asci_scor_sites) # 2270
+
 
 # lose some sites if keep in OoverE metrics and salinity - 2260 (365 lost)
 # for now continue with most sites possible - just MMI and DO metrics. 
@@ -82,6 +83,8 @@ asci_scor_sites$SampleID_old <- as.character(asci_scor_sites$SampleID_old)
 # use lubridate/tidyr to fix dates to a consistent format
 algae <- separate(asci_scor_sites, col = SampleID_old , into=c("StationID", "MM", "DD", "YY", "Rep", "Rep2"), remove = F) 
 head(algae)
+
+
 # SampleID: recommended format is "stationcode_sampledate_collectionmethodcode_fieldreplicate" - already set this way in algae
 
 # Warning message:
@@ -92,12 +95,13 @@ head(algae)
 ## 26 have extra elements to split - need to be kept for StationID
 
 #  issue here!! number below no longer match - need a universal solution!! Continue tomorrow
-
+nas <- which(!is.na(algae$Rep2))
 #  all station IDs with the extra element
-weird_station_IDs <- unique(algae[c(1679, 1680, 1685, 1686, 1687, 1700, 2199:2217, 2242), 2])
+weird_station_IDs <- unique(algae[nas, 2])
 weird_station_IDs
 # vector with index positions
 wsid <- algae$StationID %in% weird_station_IDs
+# sum(wsid) #26
 #  change values using index
 algae[wsid,2] <- paste(algae$StationID[wsid], "_", algae$MM[wsid], sep="")
 algae[wsid,3] <- paste(algae$DD[wsid])
@@ -106,12 +110,11 @@ algae[wsid,5] <- paste(algae$Rep[wsid])
 algae[wsid,6] <- paste(algae$Rep2[wsid])
 
 head(algae)
-algae[which(is.na(algae$sampledate)),]
-which(is.na(algae$sampledate))
+# algae[which(is.na(algae$sampledate)),]
+# which(is.na(algae$sampledate))
  # add sample date
 algae$sampledate = ymd(paste0(algae$YY,"-", algae$MM, "-",algae$DD))
-# Warning message:
-#   42 failed to parse. 
+
 #  remove Rep 2 column 
 
 algae$Rep2 <- NULL
@@ -120,7 +123,7 @@ sum(is.na(algae)) # 0
 #  look at oldest date - to match with FFM
 sort(unique(as.Date(algae$sampledate)))[1] # 2007-06-05
 
-dim(algae) ## 2260
+dim(algae) ## 2270
 head(algae)
 
 # how many missing SampleID's?: 
@@ -190,5 +193,5 @@ head(algae)
 
 algae <- algae[, -c(3:6)] # may change with rep decision
 head(algae)
-save(algae, file="output_data/clean_algae.RData")
+save(algae, file="output_data/clean_algae.RData") # data has mmi and DO, not salinity. can add salinity easily but will lose some sites
 
