@@ -425,6 +425,7 @@ algae_segs_df <-algae_missing_coms %>% flatten_dfc() %>% t() %>% as.data.frame()
   mutate(StationID = algae_segs$StationID)
 #save(bmi_segs_df, file = "data_output/03_selected_bmi_missing_comids.rda")
 algae_segs_df
+algae_segs_df <- algae_segs_df[!duplicated(algae_segs_df),] #several duplicates due to replicates. remove here, shuld not affect the reps in main dataset
 
 
 # save back out:
