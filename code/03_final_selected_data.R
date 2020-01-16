@@ -40,13 +40,14 @@ mapviewOptions(basemaps=basemapsList)
 
 # Get algae comids ----------------------------------------------------------
 #  merge algae comids and gages
-# head(algae_segs_df)
-# head(sel_algae_gages)
+head(algae_segs_df)
+head(sel_algae_gages)
+dim(algae_segs_df)
 # unique(sel_algae_gages$ID) # 40
 # unique(sel_algae_gages$gage) # 40
 
 algae_com_gage <- merge(algae_segs_df, sel_algae_gages, by="StationID")
-# head(algae_com_gage) # 126 sites & 40 gages
+head(algae_com_gage) # 126 sites & 40 gages
 dim(algae_com_gage)
 algae_com_gage <- algae_com_gage %>% 
   st_as_sf(coords=c("Latitude", "Longitude"), crs=4326, remove=F) # define coords to make spatial
@@ -129,7 +130,7 @@ algae_ds_coms <- algae_com_gage %>% filter(comid %in% mainstems_ds$nhdplus_comid
 algae_coms <- rbind(algae_ds_coms, algae_us_coms)
 
 # distinct stations:
-algae_coms %>% st_drop_geometry() %>% distinct(StationID, ID) %>% tally() #74
+algae_coms %>% st_drop_geometry() %>% distinct(SampleID_old, ID) %>% tally() #74
 algae_coms %>% st_drop_geometry() %>% distinct(comid) %>% tally() #61
 head(algae_coms)
 # potential sites:
@@ -144,9 +145,9 @@ rm(algae_ds_coms, algae_us_coms)
 # # subset full df for only asci scores
 head(algae_com_gage) # want stationid, comid, sampleid, lat, long, all metrics
 names(algae_com_gage)
-asci_mets <- algae_com_gage[,c(1:12)]
+asci_mets <- algae_com_gage[,c(1:13)]
 head(asci_mets)
-dim(asci_mets) #126
+dim(asci_mets) #310 - fix here!!!!!!! why duplicates???
 asci_mets <- as.data.frame(asci_mets)
 # 
 # # # match against existing sites:

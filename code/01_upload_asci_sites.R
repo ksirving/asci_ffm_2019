@@ -191,7 +191,7 @@ head(algae)
 
 #  remiove unwated columns and save
 
-algae <- algae[, -c(3:6)] # may change with rep decision
+algae <- algae[, -c(3:5)] # may change with rep decision
 head(algae)
 save(algae, file="output_data/clean_algae.RData") # data has mmi and DO, not salinity. can add salinity easily but will lose some sites
 

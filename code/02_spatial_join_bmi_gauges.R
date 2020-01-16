@@ -13,7 +13,7 @@ setwd("/Users/katieirving/Documents/git/asci_ffm_2019")
 #  load clean algae data
 
 load(file="output_data/clean_algae.RData") # algae
-head(algae)
+head(algae) # rep here
 dim(algae)
 
 ## convert to spatial for pairing - 1) with bmi (overlap), 2) ref gauges
@@ -47,7 +47,7 @@ algae <- algae %>%
 
 save(algae, file="output_data/algae_spatial.RData")
 
-
+head(algae)
 #  component metrics for Algae - only OoverE & MMI for diatoms and soft bodied
 #  awaiting dataset
 
@@ -71,7 +71,7 @@ bmi_sites <- bmi_sites %>%
   st_as_sf(coords=c("longitude", "latitude"), crs=4326, remove=F) # define coords to make spatial
 
 #  algae and bug sites 
-head(algae)
+head(algae) # rep here
 head(bmi_sites)
 
 #  pair sites
@@ -130,6 +130,7 @@ gages_final2 <- gages_final2 %>%
 # how many 
 # Add H12 to points to algae and Gages (adds ATTRIBUTES, retains ALL pts if left=TRUE)
 algae_h12 <- st_join(algae, left = FALSE, h12[c("HUC_12","h12_area_sqkm")]) #
+head(algae_h12) #rep here
 # although coordinates are longitude/latitude, st_intersects assumes that they are planar
 # ?st_join
 gages_h12 <- st_join(gages_final2, left=FALSE, h12[c("HUC_12")]) #%>% 
@@ -146,14 +147,14 @@ gages_h12 <- as.data.frame(gages_h12)
 
 
 # now join based on H12: how many are in same?
-sel_algae_gages <- inner_join(algae_h12, gages_h12, by="HUC_12") %>% distinct(StationID, .keep_all = T)
-dim(sel_algae_gages) #126
+sel_algae_gages <- inner_join(algae_h12, gages_h12, by="HUC_12") %>% distinct(SampleID_old, .keep_all = T) #StationID if not applying reps as individual samples
+dim(sel_algae_gages) #164
 head(sel_algae_gages)
 
 # number of unique h12s?
 length(unique(factor(sel_algae_gages$HUC_12))) # 40 unique h12
 length(unique(sel_algae_gages$ID)) # 40 unique gages
-length(unique(sel_algae_gages$StationID)) #  126 unique algae sites
+length(unique(sel_algae_gages$SampleID_old)) # StationID- 126 unique algae sites - 164 when treating each rep as individual samples
 # so 126 possible algae sites, 40 gages, in 40 HUC12's 
 save(sel_algae_gages, file="output_data/paired_gages_algae_merged.RData") #algae data plus gage and huc12 
 
@@ -396,11 +397,12 @@ library(devtools)
 # devtools::install_github("USGS-R/nhdplusTools")
 library(nhdplusTools)
 
+head(sel_algae_gages)
 
-algae_segs<- sel_algae_gages[,c(2:4)]
+algae_segs<- sel_algae_gages[,c(2:5)]
 algae_segs$comid <- NA
-head(algae_segs)
-dim(algae_segs) #126
+head(algae_segs) #reps here
+dim(algae_segs) #126 - 164 with reps
 
   
 # get the comid for the BMI points w no comids using purrr
