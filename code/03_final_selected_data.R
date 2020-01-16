@@ -43,12 +43,12 @@ mapviewOptions(basemaps=basemapsList)
 head(algae_segs_df)
 head(sel_algae_gages)
 dim(algae_segs_df)
-# unique(sel_algae_gages$ID) # 40
+unique(sel_algae_gages$ID) # 40
 # unique(sel_algae_gages$gage) # 40
 
 algae_com_gage <- merge(algae_segs_df, sel_algae_gages, by="StationID")
 head(algae_com_gage) # 126 sites & 40 gages
-dim(algae_com_gage)
+dim(algae_com_gage) #164
 algae_com_gage <- algae_com_gage %>% 
   st_as_sf(coords=c("Latitude", "Longitude"), crs=4326, remove=F) # define coords to make spatial
 
@@ -99,7 +99,7 @@ algae_coms <- do.call(what = sf:::rbind.sf,
                     args = list(algae_ds_coms, algae_us_coms))
 # class(algae_coms)
 head(algae_coms)
-dim(algae_coms)
+dim(algae_coms) #120
 # head(algae)
 # sum(is.na(algae))
 #library(DT)
@@ -147,7 +147,7 @@ head(algae_com_gage) # want stationid, comid, sampleid, lat, long, all metrics
 names(algae_com_gage)
 asci_mets <- algae_com_gage[,c(1:13)]
 head(asci_mets)
-dim(asci_mets) #310 - fix here!!!!!!! why duplicates???
+dim(asci_mets) # 164
 asci_mets <- as.data.frame(asci_mets)
 # 
 # # # match against existing sites:
@@ -181,14 +181,14 @@ asci_mets <- as.data.frame(asci_mets)
 #   )
 # }
 
-# plot asci percentile
-ggplot(data=filter(bmi_csci, !is.na(SiteStatus)), aes(x=SiteStatus, y=csci_percentile)) + 
-  geom_boxplot(aes(fill=SiteStatus), show.legend = F) +
-  stat_summary(fun.data=stat_box_data, geom="text", hjust=1, vjust=0.9) +
-  theme_bw()
-
-ggplot(data=bmi_csci, aes(x=SiteStatus, y=csci_percentile)) + 
-  geom_boxplot(aes(fill=SiteStatus), show.legend = F) +
-  stat_summary(fun.data=stat_box_data, geom="text", hjust=1, vjust=0.9) +
-  theme_bw()
+# # plot asci percentile
+# ggplot(data=filter(bmi_csci, !is.na(SiteStatus)), aes(x=SiteStatus, y=csci_percentile)) + 
+#   geom_boxplot(aes(fill=SiteStatus), show.legend = F) +
+#   stat_summary(fun.data=stat_box_data, geom="text", hjust=1, vjust=0.9) +
+#   theme_bw()
+# 
+# ggplot(data=bmi_csci, aes(x=SiteStatus, y=csci_percentile)) + 
+#   geom_boxplot(aes(fill=SiteStatus), show.legend = F) +
+#   stat_summary(fun.data=stat_box_data, geom="text", hjust=1, vjust=0.9) +
+#   theme_bw()
 

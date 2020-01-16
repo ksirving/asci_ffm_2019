@@ -81,7 +81,8 @@ flow_por <- flow_long %>% select(-YrRange, -gage, -year, -stream_class) %>% grou
 
 load("output_data/paired_gages_algae_merged.RData") # sel_algae_gages - 126 algae sites, 40 gages
 head(sel_algae_gages)
-asci_mets <- sel_algae_gages[,c(1:11)] 
+names(sel_algae_gages)
+asci_mets <- sel_algae_gages[,c(1:12)] 
 head(asci_mets)
 
 asci_mets <- separate(asci_mets, col = sampledate , into=c("YYYY", "MM", "DD"), remove = F) 
@@ -170,7 +171,7 @@ algae_coms <- rbind(algae_ds_coms, algae_us_coms)
 algae_coms %>% st_drop_geometry() %>% distinct(StationID, ID) %>% tally() #74
 algae_coms %>% st_drop_geometry() %>% distinct(comid) %>% tally() #61
 head(algae_coms)
-dim(algae_coms) # 93
+dim(algae_coms) # 120
 # potential sites:
 #bmi_coms %>% View()
 
@@ -180,37 +181,41 @@ rm(algae_ds_coms, algae_us_coms)
 algae_coms_sub <- algae_coms[, 1:15]
 
 # #  look at asci scores
+
+head(algae_coms_sub)
+algae_coms_sub$asci_percentile <- quantile(algae_coms_sub$MMI.hybrid, c(0.1,0.5, 0.9))
+?quantile
 # 
-# stat_box_data <- function(y, upper_limit = max(algae_coms_sub$asci_percentile)) {
-#   return( 
-#     data.frame(
-#       y = 0.95 * upper_limit,
-#       label = paste('count =', length(y), '\n',
-#                     'mean =', round(mean(y), 1), '\n')
-#     )
-#   )
-# }
-# 
-# head(algae_coms_sub)
-# 
+stat_box_data <- function(y, upper_limit = max(algae_coms_sub$asci_percentile)) {
+  return(
+    data.frame(
+      y = 0.95 * upper_limit,
+      label = paste('count =', length(y), '\n',
+                    'mean =', round(mean(y), 1), '\n')
+    )
+  )
+}
+
+head(algae_coms_sub)
+
 # 
 # # look at CSCI percentile by Site Status (not avail for all sites)
-# ggplot() + geom_boxplot(data=algae_coms_sub, aes(x=ID, y=asci_percentile))
-# 
-# 
-# # plot asci percentile no NAs
-# ggplot(data=filter(alage_csci, !is.na(SiteStatus)), aes(x=ID, y=asci_percentile)) + 
-#   geom_boxplot(aes(fill=SiteStatus), show.legend = F) +
-#   stat_summary(fun.data=stat_box_data, geom="text",cex=3, hjust=1, vjust=0.9) +
-#   ylab("CSCI (Percentile)") + xlab("Site Status")+
-#   theme_bw()
-# 
-# # plot CSCI percentile w/ NAs
-# ggplot(data=bmi_csci, aes(x=SiteStatus, y=csci_percentile)) + 
-#   geom_boxplot(aes(fill=SiteStatus), show.legend = F) +
-#   stat_summary(fun.data=stat_box_data, geom="text", cex=3, hjust=1, vjust=0.9) +
-#   ylab("CSCI (Percentile)") + xlab("Site Status")+
-#   theme_bw()
+ggplot() + geom_boxplot(data=algae_coms_sub, aes(x=StationID, y=asci_percentile))
+
+
+# plot asci percentile no NAs
+ggplot(data=filter(alage_csci, !is.na(SiteStatus)), aes(x=ID, y=asci_percentile)) +
+  geom_boxplot(aes(fill=SiteStatus), show.legend = F) +
+  stat_summary(fun.data=stat_box_data, geom="text",cex=3, hjust=1, vjust=0.9) +
+  ylab("CSCI (Percentile)") + xlab("Site Status")+
+  theme_bw()
+
+# plot CSCI percentile w/ NAs
+ggplot(data=bmi_csci, aes(x=SiteStatus, y=csci_percentile)) +
+  geom_boxplot(aes(fill=SiteStatus), show.legend = F) +
+  stat_summary(fun.data=stat_box_data, geom="text", cex=3, hjust=1, vjust=0.9) +
+  ylab("CSCI (Percentile)") + xlab("Site Status")+
+  theme_bw()
 
 #  combine with flow data POR
 
@@ -229,8 +234,6 @@ length(unique(algae_asci_flow_por_overlap$ID)) # 28 gages
 
 save(algae_asci_flow_por, file="output_data/algae_gage_flow_metrics_POR.RData")
 
-#  calculate lag 1 & 2 and annual
 
-## continue here!!!!!!
 
 
