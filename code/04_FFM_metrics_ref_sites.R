@@ -199,41 +199,41 @@ stat_box_data <- function(y, upper_limit = max(algae_coms_sub$asci_percentile)) 
 head(algae_coms_sub)
 
 # 
-# # look at CSCI percentile by Site Status (not avail for all sites)
-ggplot() + geom_boxplot(data=algae_coms_sub, aes(x=StationID, y=asci_percentile))
-
-
-# plot asci percentile no NAs
-ggplot(data=filter(alage_csci, !is.na(SiteStatus)), aes(x=ID, y=asci_percentile)) +
-  geom_boxplot(aes(fill=SiteStatus), show.legend = F) +
-  stat_summary(fun.data=stat_box_data, geom="text",cex=3, hjust=1, vjust=0.9) +
-  ylab("CSCI (Percentile)") + xlab("Site Status")+
-  theme_bw()
-
-# plot CSCI percentile w/ NAs
-ggplot(data=bmi_csci, aes(x=SiteStatus, y=csci_percentile)) +
-  geom_boxplot(aes(fill=SiteStatus), show.legend = F) +
-  stat_summary(fun.data=stat_box_data, geom="text", cex=3, hjust=1, vjust=0.9) +
-  ylab("CSCI (Percentile)") + xlab("Site Status")+
-  theme_bw()
-
-#  combine with flow data POR
-
-# Join with Flow POR ------------------------------------------------------
-
-algae_asci_flow_por <- left_join(algae_coms_sub, flow_por_wide, by="ID")
-
-algae_asci_flow_porx <- separate(algae_asci_flow_por, col=sampledate, into =c("YY", "MM", "DD"), remove=F)
-head(algae_asci_flow_porx)
-# filter to sites that have data in the flow time range? # doesn't matter for POR?
-algae_asci_flow_por_overlap <- algae_asci_flow_porx %>%
-  filter(YY > minYr, YY< maxYr)
-
-length(unique(algae_asci_flow_por_overlap$StationID)) # 56 stations
-length(unique(algae_asci_flow_por_overlap$ID)) # 28 gages
-
-save(algae_asci_flow_por, file="output_data/algae_gage_flow_metrics_POR.RData")
-
-
-
-
+# # # look at CSCI percentile by Site Status (not avail for all sites)
+# ggplot() + geom_boxplot(data=algae_coms_sub, aes(x=StationID, y=asci_percentile))
+# 
+# 
+# # plot asci percentile no NAs
+# ggplot(data=filter(alage_csci, !is.na(SiteStatus)), aes(x=ID, y=asci_percentile)) +
+#   geom_boxplot(aes(fill=SiteStatus), show.legend = F) +
+#   stat_summary(fun.data=stat_box_data, geom="text",cex=3, hjust=1, vjust=0.9) +
+#   ylab("CSCI (Percentile)") + xlab("Site Status")+
+#   theme_bw()
+# 
+# # plot CSCI percentile w/ NAs
+# ggplot(data=bmi_csci, aes(x=SiteStatus, y=csci_percentile)) +
+#   geom_boxplot(aes(fill=SiteStatus), show.legend = F) +
+#   stat_summary(fun.data=stat_box_data, geom="text", cex=3, hjust=1, vjust=0.9) +
+#   ylab("CSCI (Percentile)") + xlab("Site Status")+
+#   theme_bw()
+# 
+# #  combine with flow data POR
+# 
+# # Join with Flow POR ------------------------------------------------------
+# 
+# algae_asci_flow_por <- left_join(algae_coms_sub, flow_por_wide, by="ID")
+# 
+# algae_asci_flow_porx <- separate(algae_asci_flow_por, col=sampledate, into =c("YY", "MM", "DD"), remove=F)
+# head(algae_asci_flow_porx)
+# # filter to sites that have data in the flow time range? # doesn't matter for POR?
+# algae_asci_flow_por_overlap <- algae_asci_flow_porx %>%
+#   filter(YY > minYr, YY< maxYr)
+# 
+# length(unique(algae_asci_flow_por_overlap$StationID)) # 56 stations
+# length(unique(algae_asci_flow_por_overlap$ID)) # 28 gages
+# 
+# save(algae_asci_flow_por, file="output_data/algae_gage_flow_metrics_POR.RData")
+# 
+# 
+# 
+# 

@@ -1,6 +1,6 @@
 # BRTs (Boosted Regression Trees)
 ## R. Peek - Katie Irving
-## BRT Models of the BMI Metrics vs. Flw Metrics
+## BRT Models of the Algae Metrics vs. Flw Metrics
 ## Use 4 different flow datasets:  Annual, lag1, lag2, and POR
 ## This is initial cut
 
@@ -34,15 +34,16 @@ load("output_data/paired_only_gages_algae.RData")
 load("output_data/paired_gages_algae_comid.RData")
 load("output_data/algae_gage_flow_metrics_POR.RData")
 
+
 # Link Regions ------------------------------------------------------------
 
 # read in fish regions:
-load("data/07_umbrella_sp_regions.rda")
+load("input_data/07_umbrella_sp_regions.rda")
 
 # spatial join gage sites with regions, adds ATTRIBUTES, retains ALL pts if left=TRUE,
-sel_gages_bmi <- st_join(st_transform(sel_gages_bmi, 3310), left = TRUE, ca_sp_regions["huc_region"])
+sel_gages_algae <- st_join(st_transform(sel_gages_algae, 3310), left = TRUE, ca_sp_regions["huc_region"])
 
-bmi_nearest <- st_join(st_transform(bmi_nearest, 3310), left = TRUE, ca_sp_regions["huc_region"])
+algae_nearest <- st_join(st_transform(algae_nearest, 3310), left = TRUE, ca_sp_regions["huc_region"])
 
 mapview(sel_gages_bmi, col.regions="deepskyblue4", cex=7, alpha=0.7) + 
   mapview(mainstems, color="darkblue", lwd=0.5) +
