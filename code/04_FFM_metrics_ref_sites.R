@@ -83,6 +83,7 @@ load("output_data/paired_gages_algae_merged.RData") # sel_algae_gages - 126 alga
 head(sel_algae_gages)
 names(sel_algae_gages)
 asci_mets <- sel_algae_gages[,c(1:12)] 
+
 head(asci_mets)
 
 asci_mets <- separate(asci_mets, col = sampledate , into=c("YYYY", "MM", "DD"), remove = F) 
@@ -131,10 +132,10 @@ flow_por_wide <- flow_por %>%
 load("output_data/algae_all_stations_comids.rda")
 load("output_data/clean_algae.RData")
 load("output_data/paired_gages_algae_merged.RData")
-load("output_data/selected_nhd_flowlines_mainstems.rda")
+load("output_data/selected_nhd_flowlines_mainstems.rda") #mainstems_ds us
 load("output_data/selected_h12_contain_algae_gage.rda")
 load("output_data/paired_only_gages_algae.RData")
-load("output_data/paired_gages_algae_comid.RData")
+load("output_data/03_paired_gages_algae_comid.RData") #algae_com_gage
 
 
 #  mainstem sites upstream/downstream. combine 
@@ -149,6 +150,7 @@ algae_coms <- do.call(what = sf:::rbind.sf,
 
 unique(algae_coms$SampleID_old)
 dim(algae_coms)
+head(algae_coms)
 
 # now look at how many unique samples are avail: n=93 unique samples - 74 here - mistake in code somewhere earlier. check this!!!!!
 algae_coms %>% as.data.frame() %>% group_by(StationID) %>% distinct(StationID) %>% tally
@@ -157,13 +159,13 @@ algae_coms %>% as.data.frame() %>% group_by(StationID) %>% distinct(StationID) %
 algae_coms %>% as.data.frame() %>% group_by(StationID) %>% distinct(StationID) %>% tally
 
 
-
 # all stations us of gage:
 algae_us_coms <- algae_com_gage %>% filter(comid %in% mainstems_us$nhdplus_comid)
+algae_us_coms$to_gage <- paste("us")
 
 # all stations 15km downstream on mainstem
 algae_ds_coms <- algae_com_gage %>% filter(comid %in% mainstems_ds$nhdplus_comid)
-
+algae_ds_coms$to_gage <- paste("ds")
 # combine US and DS
 algae_coms <- rbind(algae_ds_coms, algae_us_coms)
 
@@ -171,69 +173,54 @@ algae_coms <- rbind(algae_ds_coms, algae_us_coms)
 algae_coms %>% st_drop_geometry() %>% distinct(StationID, ID) %>% tally() #74
 algae_coms %>% st_drop_geometry() %>% distinct(comid) %>% tally() #61
 head(algae_coms)
-dim(algae_coms) # 120
+# dim(algae_coms) # 120
 # potential sites:
 #bmi_coms %>% View()
 
 # rm old layer:
 rm(algae_ds_coms, algae_us_coms)
 
-algae_coms_sub <- algae_coms[, 1:15]
 
-# #  look at asci scores
-
-head(algae_coms_sub)
-algae_coms_sub$asci_percentile <- quantile(algae_coms_sub$MMI.hybrid, c(0.1,0.5, 0.9))
-?quantile
-# 
-stat_box_data <- function(y, upper_limit = max(algae_coms_sub$asci_percentile)) {
-  return(
-    data.frame(
-      y = 0.95 * upper_limit,
-      label = paste('count =', length(y), '\n',
-                    'mean =', round(mean(y), 1), '\n')
-    )
-  )
-}
-
-head(algae_coms_sub)
-
-# 
-# # # look at CSCI percentile by Site Status (not avail for all sites)
-# ggplot() + geom_boxplot(data=algae_coms_sub, aes(x=StationID, y=asci_percentile))
-# 
-# 
-# # plot asci percentile no NAs
-# ggplot(data=filter(alage_csci, !is.na(SiteStatus)), aes(x=ID, y=asci_percentile)) +
-#   geom_boxplot(aes(fill=SiteStatus), show.legend = F) +
-#   stat_summary(fun.data=stat_box_data, geom="text",cex=3, hjust=1, vjust=0.9) +
-#   ylab("CSCI (Percentile)") + xlab("Site Status")+
-#   theme_bw()
-# 
-# # plot CSCI percentile w/ NAs
-# ggplot(data=bmi_csci, aes(x=SiteStatus, y=csci_percentile)) +
-#   geom_boxplot(aes(fill=SiteStatus), show.legend = F) +
-#   stat_summary(fun.data=stat_box_data, geom="text", cex=3, hjust=1, vjust=0.9) +
-#   ylab("CSCI (Percentile)") + xlab("Site Status")+
-#   theme_bw()
-# 
 # #  combine with flow data POR
 # 
 # # Join with Flow POR ------------------------------------------------------
+flow_por_wide
+algae_asci_flow_por <- left_join(algae_coms, flow_por_wide, by="ID")
+
+algae_asci_flow_porx <- separate(algae_asci_flow_por, col=sampledate, into =c("YY", "MM", "DD"), remove=F)
+head(algae_asci_flow_porx)
+algae_asci_flow_porx$YY <- as.numeric(as.character(algae_asci_flow_porx$YY))
+# filter to sites that have data in the flow time range? # doesn't matter for POR?
+algae_asci_flow_por_overlap <- algae_asci_flow_porx %>%
+  filter(YY > minYr.x, YY< maxYr.x)
+
+length(unique(algae_asci_flow_por_overlap$StationID)) # 56 stations
+length(unique(algae_asci_flow_por_overlap$ID)) # 28 gages
+
+save(algae_asci_flow_por, file="output_data/04_algae_gage_flow_metrics_POR.RData")
+
+# JOIN with Flow by algae Lag Years ----------------------------------------
+names(algae_asci_flow_porx)
+str(algae_asci_flow_porx$YY)
+str(algae_asci_flow_porx$year)
+
+algae_asci_flow_porx$year
+algae_asci_flow_yrs <- left_join(algae_asci_flow_porx, flow_by_years_asci_wide, by=c("ID")) %>% 
+  # filter to same year as algae + 2 yr lag
+  filter(YY == year | YY == year+1 | YY ==year+2)
+
+algae_asci_flow_porx$YY == algae_asci_flow_porx$year +2
+algae_asci_flow_porx$year +2
+# double check, should have 3 entries per sampleid
+# bmi_csci_flow_yrs %>% select(StationCode, sampleid, sampleyear, year) %>% View()
+
+# # filter to sites that have data in the flow time range?
+# bmi_csci_flow_yrs %>% st_drop_geometry() %>% distinct(StationCode) %>% tally() # 101 BMI sites
+# bmi_csci_flow_yrs %>% st_drop_geometry() %>% distinct(sampleid, year) %>% tally() # 522 separate data points
+# bmi_csci_flow_yrs %>% st_drop_geometry() %>% distinct(ID) %>% tally() # 38 gages
 # 
-# algae_asci_flow_por <- left_join(algae_coms_sub, flow_por_wide, by="ID")
-# 
-# algae_asci_flow_porx <- separate(algae_asci_flow_por, col=sampledate, into =c("YY", "MM", "DD"), remove=F)
-# head(algae_asci_flow_porx)
-# # filter to sites that have data in the flow time range? # doesn't matter for POR?
-# algae_asci_flow_por_overlap <- algae_asci_flow_porx %>%
-#   filter(YY > minYr, YY< maxYr)
-# 
-# length(unique(algae_asci_flow_por_overlap$StationID)) # 56 stations
-# length(unique(algae_asci_flow_por_overlap$ID)) # 28 gages
-# 
-# save(algae_asci_flow_por, file="output_data/algae_gage_flow_metrics_POR.RData")
-# 
-# 
-# 
-# 
+# # how many NA's across records?
+# bmi_csci_flow_yrs %>% drop_na(SP_Tim:Peak_Mag_20) %>% dim() # end up with 145 records, would drop 76% of data
+
+
+

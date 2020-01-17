@@ -16,12 +16,6 @@ library(lubridate)
 
 # Load Data ---------------------------------------------------------------
 
-# load("data_output/01_bmi_cleaned_stations_w_site_status.rda") # don't have this one - algae ref sites?
-# load("data_output/03_selected_bmi_and_gages.rda")
-# load("data_output/03_selected_nhd_flowlines_mainstems.rda")
-# load("data_output/03_selected_h12_contain_bmi_gage.rda")
-# load("data_output/00_bmi_cleaned_all.rda")
-# load("data_output/03_bmi_all_stations_comids.rda")
 
 load("output_data/algae_all_stations_comids.rda") # algae_segs_df - algae sites and comids
 load("output_data/clean_algae.RData") # algae - all data
@@ -52,7 +46,7 @@ dim(algae_com_gage) #164
 algae_com_gage <- algae_com_gage %>% 
   st_as_sf(coords=c("Latitude", "Longitude"), crs=4326, remove=F) # define coords to make spatial
 
-save(algae_com_gage, file="output_data/paired_gages_algae_comid.RData" ) # gages us and ds mets
+save(algae_com_gage, file="output_data/03_paired_gages_algae_comid.RData" ) # gages us and ds mets
 # all stations us of gage:
 algae_us_coms <- algae_com_gage %>% filter(comid %in% mainstems_us$nhdplus_comid)
 
@@ -104,7 +98,7 @@ dim(algae_coms) #120
 # sum(is.na(algae))
 #library(DT)
 
-save(algae_coms, file="output_data/gages_comids_algaemets.RData")
+
 
 # # pull algae sites and get list of data, first join with orig full dataset:
 # algae_coms_dat <- left_join(algae_coms, algae, by="StationID") #%>% 
@@ -139,6 +133,7 @@ head(algae_coms)
 # rm old layer:
 rm(algae_ds_coms, algae_us_coms)
 
+save(algae_coms, file="output_data/03_gages_comids_algae_mets.RData")
 
 # Check against asci Scores -----------------------------------------------
 # 
