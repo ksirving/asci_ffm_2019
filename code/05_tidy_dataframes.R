@@ -12,7 +12,7 @@ library(CSCI)
 library(BMIMetrics)
 library(lubridate)
 library(tidylog)
-install.packages("tidylog")
+# install.packages("tidylog")
 
 # Data --------------------------------------------------------------------
 
@@ -39,8 +39,6 @@ load("output_data/selected_nhd_flowlines_mainstems.rda") # mainstems_us, mainste
 load("output_data/03_gages_comids_algae_mets.RData") # algae_coms asci metrics, gages and comids
 # load("output_data/clean_algae.RData") # algae - all data
 load("output_data/04_algae_gage_flow_metrics_POR.RData") #algae_asci_flow_por - algae metrics, gages, comids and FFM for period of record
-
-
 
 
 # load("/Users/katieirving/Documents/git/bmi_ffm_links/data_output/02_final_bmi_stations_dat_reference.rda")
@@ -79,4 +77,17 @@ algae_asci_flow_por <- algae_asci_flow_por[, -c(95,96, 59,60,47:57, 17:40)]
 names(algae_asci_flow_por)[20:21] <- c("maxYr", "minYr")
 
 save(algae_asci_flow_por, file="output_data/05_algae_metrics_with_FFM_POR.RData")
+
+
+load("output_data/paired_gages_algae_merged.RData") # sel_algae_gages - 126 algae sites, 40 gages
+load("output_data/paired_only_gages_algae.RData") # sel_gages_algae paired gages - no algae data
+#  gages paired with algae sites. needed for spatial join
+
+head(sel_algae_gages)
+names(sel_algae_gages)
+sel_algae_gages <- sel_algae_gages[,c(1:15,40:45,57)]
+save(sel_algae_gages, file="output_data/05_paired_gages_algaesites_merged.RData")
+
+head(sel_gages_algae)
+save(sel_gages_algae, file="output_data/05_selected_gages.RData")
 
