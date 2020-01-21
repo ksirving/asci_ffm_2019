@@ -16,21 +16,6 @@ library(tidylog)
 
 # Data --------------------------------------------------------------------
 
-# load("data_output/05a_selected_ref_bmi_w_csci_flow_por.rda") # bmi_csci_flow_por
-# load("data_output/05a_selected_ref_bmi_w_csci_flow_yrs.rda") # bmi_csci_flow_yrs
-# load("data_output/05a_selected_ref_bmi_final_dat.rda") # bmi_final_dat
-# load("data_output/05a_all_ref_usgs_flow_metrics_por.rda") # flow_por_wide, flow_por
-# 
-# # flow_by_years_bmi, # flow_by_years_bmi_wide
-# load("data_output/05a_selected_ref_flow_by_years_of_bmi.rda") 
-# 
-# load("data_output/01_bmi_cleaned_stations_w_site_status.rda") # bmi_clean_stations_ss (site status)
-# load("data_output/02_selected_bmi_and_gages_same_h12.rda") # sel_bmi_gages, sel_gages_bmi
-# load("data_output/02_selected_nhd_flowlines_mainstems.rda") # mainstems_us, mainstems_ds
-# load("data_output/02_selected_h12_contain_bmi_gage.rda") # all h12s w bmi and gage: sel_h12_bmi
-# load("data_output/02_final_bmi_stations_dat_reference.rda") # bmi_coms_dat (all data for selected), bmi_coms_final (just coms and id)
-# #bmi_coms <- read_rds("data_output/02_bmi_all_stations_comids.rds") # just bmi_coms, comids for all BMI sites
-# 
 # load("output_data/algae_all_stations_comids.rda") # algae_segs_df - algae sites and comids
 # load("output_data/selected_h12_contain_algae_gage.rda") # sel_h12s_algae - huc 12s
 load("output_data/02_selected_nhd_flowlines_mainstems.rda") # mainstems_us, mainstems_ds mainstems us/ds
@@ -39,7 +24,7 @@ load("output_data/02_selected_nhd_flowlines_mainstems.rda") # mainstems_us, main
 load("output_data/03_gages_comids_algae_mets.RData") # algae_coms asci metrics, gages and comids
 # load("output_data/clean_algae.RData") # algae - all data
 load("output_data/04_algae_gage_flow_metrics_POR.RData") #algae_asci_flow_por - algae metrics, gages, comids and FFM for period of record
-
+load("output_data/04_algae_gage_flow_metrics_Lag_and_Ann.RData") #algae_asci_flow_lagann
 
 # load("/Users/katieirving/Documents/git/bmi_ffm_links/data_output/02_final_bmi_stations_dat_reference.rda")
 
@@ -71,7 +56,8 @@ basemapsList <- c("Esri.WorldTopoMap", "Esri.WorldImagery","Esri.NatGeoWorldMap"
                   "CartoDB.Positron", "Stamen.TopOSMFeatures")
 mapviewOptions(basemaps=basemapsList)
 
-
+#############################################
+## flow data
 load("output_data/04_algae_gage_flow_metrics_POR.RData") 
 names(algae_asci_flow_por)
 algae_asci_flow_por <- algae_asci_flow_por[, -c(96,97, 60,61,48:58, 18:41)]
@@ -80,9 +66,39 @@ names(algae_asci_flow_por)[21:22] <- c("maxYr", "minYr")
 save(algae_asci_flow_por, file="output_data/05_algae_metrics_with_FFM_POR.RData")
 
 
+load("output_data/04_algae_gage_flow_metrics_Lag_and_Ann.RData")
+# split lag and ann into separate datasets
+head(algae_asci_flow_lagann)
+str(algae_asci_flow_lagann)
+algae_asci_flow_lagann$year.y <- as.numeric(as.character(algae_asci_flow_lagann$year.y))
+
+## annual
+algae_asci_flow_annual <- filter(algae_asci_flow_lagann, YY==year.y)
+head(algae_asci_flow_annual) 
+sum(is.na(algae_asci_flow_annual)) # 608, loads!!!!!
+
+## lag 1
+
+algae_asci_flow_lag1 <- filter(algae_asci_flow_lagann, YY==year.y+1)
+head(algae_asci_flow_lag1) 
+sum(is.na(algae_asci_flow_lag1)) # 416, loads!!!!!
+
+## lag 2
+algae_asci_flow_lag2 <- filter(algae_asci_flow_lagann, YY==year.y+2)
+head(algae_asci_flow_lag2) 
+sum(is.na(algae_asci_flow_lag2)) # 295, loads!!!!!
+
+##save 
+
+save(algae_asci_flow_annual, file="output_data/05_asci_flow_annual.RData")
+save(algae_asci_flow_lag1, file="output_data/05_asci_flow_lag1.RData")
+save(algae_asci_flow_lag2, file="output_data/05_asci_flow_lag2.RData")
+
+
 load("output_data/02_paired_gages_algae_merged.RData") # sel_algae_gages - 126 algae sites, 40 gages
 load("output_data/02_paired_only_gages_algae.RData") # sel_gages_algae paired gages - no algae data
 #  gages paired with algae sites. needed for spatial join
+
 
 head(sel_algae_gages)
 names(sel_algae_gages)

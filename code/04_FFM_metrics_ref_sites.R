@@ -97,14 +97,14 @@ asci_yrs <- as.numeric(as.character(asci_yrs))
 
 # now combine and order:
 asci_years <- combine(asci_yrs, asci_yrs_1, asci_yrs_2) %>% sort() %>% unique() #  
-#asci_years # 2007-2015
+asci_years # 2007-2015
 
 # rm old files
 rm(asci_yrs, asci_yrs_1, asci_yrs_2)
 
 # now match with flow data (only goes through 2016)
 flow_by_years_asci <- flow_long %>% 
-  filter(year %in% asci_years) # 1993:2017
+  filter(year %in% asci_years) # 2007-2015
 
 # make wide
 flow_by_years_asci_wide <- flow_by_years_asci %>% 
@@ -152,8 +152,7 @@ unique(algae_coms$SampleID_old)
 dim(algae_coms)
 head(algae_coms)
 
-# now look at how many unique samples are avail: n=93 unique samples - 74 here - mistake in code somewhere earlier. check this!!!!!
-algae_coms %>% as.data.frame() %>% group_by(StationID) %>% distinct(StationID) %>% tally
+# now look at how many unique samples are avail: n=74 unique samples -
 
 # now look at how many unique stations: n=74 stations
 algae_coms %>% as.data.frame() %>% group_by(StationID) %>% distinct(StationID) %>% tally
@@ -183,7 +182,7 @@ rm(algae_ds_coms, algae_us_coms)
 
 save(algae_coms, file="output_data/03_gages_comids_algae_mets.RData")
 # #  combine with flow data POR
-# 
+# POR 
 # # Join with Flow POR ------------------------------------------------------
 flow_por_wide
 algae_asci_flow_por <- left_join(algae_coms, flow_por_wide, by="ID")
@@ -192,37 +191,48 @@ algae_asci_flow_porx <- separate(algae_asci_flow_por, col=sampledate, into =c("Y
 head(algae_asci_flow_porx)
 algae_asci_flow_porx$YY <- as.numeric(as.character(algae_asci_flow_porx$YY))
 # filter to sites that have data in the flow time range? # doesn't matter for POR?
-algae_asci_flow_por_overlap <- algae_asci_flow_porx %>%
-  filter(YY > minYr.x, YY< maxYr.x)
+# algae_asci_flow_por_overlap <- algae_asci_flow_porx %>%
+#   filter(YY > minYr.x, YY< maxYr.x)
 
-length(unique(algae_asci_flow_por_overlap$StationID)) # 56 stations
-length(unique(algae_asci_flow_por_overlap$ID)) # 28 gages
+# length(unique(algae_asci_flow_por_overlap$StationID)) # 56 stations
+# length(unique(algae_asci_flow_por_overlap$ID)) # 28 gages
 
 save(algae_asci_flow_por, file="output_data/04_algae_gage_flow_metrics_POR.RData")
 
 ######## lag and annual here!!!!!!!!!!!!!
+# YY = sample year
+# year = FFM year 
+algae_asci_flow_porx$year+2
+algae_asci_flow_porx$year
+names(algae_asci_flow_porx)
+algae_asci_flow_porx <- algae_asci_flow_porx[,-c(21:44,50:61,63,64,65:100)] # remove FFMs as these are POR values
+
 # JOIN with Flow by algae Lag Years ----------------------------------------
 names(algae_asci_flow_porx)
-str(algae_asci_flow_porx$YY)
+str(algae_asci_flow_yrs$YY)
 str(algae_asci_flow_porx$year)
-
+head(algae_asci_flow_yrs)
+dim(algae_asci_flow_yrs)
+head(algae_asci_flow_porx)
+dim(algae_asci_flow_porx)
 algae_asci_flow_porx$year
-algae_asci_flow_yrs <- left_join(algae_asci_flow_porx, flow_by_years_asci_wide, by=c("ID")) %>% 
-  # filter to same year as algae + 2 yr lag
-  filter(YY == year | YY == year+1 | YY ==year+2)
+algae_asci_flow_yrs$year.y
+algae_asci_flow_yrs$YY
+head(flow_by_years_asci_wide)
+names(algae_asci_flow_yrs)
+unique(flow_by_years_asci_wide$year)
 
-algae_asci_flow_porx$YY == algae_asci_flow_porx$year +2
-algae_asci_flow_porx$year +2
+algae_asci_flow_yrs <- left_join(algae_asci_flow_porx, flow_by_years_asci_wide, by=c("ID")) 
+algae_asci_flow_yrs$YY <- as.numeric(as.character(algae_asci_flow_yrs$YY))
+
+#filter to same year as algae + 2 yr lag
+algae_asci_flow_lagann <- filter(algae_asci_flow_yrs, YY == year.y | YY == year.y+1 | YY ==year.y+2)
+
 # double check, should have 3 entries per sampleid
-# bmi_csci_flow_yrs %>% select(StationCode, sampleid, sampleyear, year) %>% View()
+algae_asci_flow_lagann %>% select(StationID, SampleID_old, YY, year.y) %>% View()
+dim(algae_asci_flow_lagann)
 
-# # filter to sites that have data in the flow time range?
-# bmi_csci_flow_yrs %>% st_drop_geometry() %>% distinct(StationCode) %>% tally() # 101 BMI sites
-# bmi_csci_flow_yrs %>% st_drop_geometry() %>% distinct(sampleid, year) %>% tally() # 522 separate data points
-# bmi_csci_flow_yrs %>% st_drop_geometry() %>% distinct(ID) %>% tally() # 38 gages
-# 
-# # how many NA's across records?
-# bmi_csci_flow_yrs %>% drop_na(SP_Tim:Peak_Mag_20) %>% dim() # end up with 145 records, would drop 76% of data
+# how many NA's across records?
+algae_asci_flow_lagann %>% drop_na(SP_Tim:Peak_Mag_20) %>% dim() # end up with 86 records, would drop 70% of data
 
-
-
+save(algae_asci_flow_lagann, file="output_data/04_algae_gage_flow_metrics_Lag_and_Ann.RData")
