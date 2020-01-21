@@ -73,11 +73,9 @@ flow_por <- flow_long %>% select(-YrRange, -gage, -year, -stream_class) %>% grou
   # rejoin yr ranges
   left_join(., flow_idvars)
 
-#  also lags and annual to calculate - do later!
-
 # Get Flow Record only in Same Year/lag as algae Sites ----------------------
 
-# need to pull 2 years prior, 1 year prior, and same year as BMI site data
+# need to pull 2 years prior, 1 year prior, and same year as algae site data
 
 load("output_data/02_paired_gages_algae_merged.RData") # sel_algae_gages - 126 algae sites, 40 gages
 head(sel_algae_gages)
@@ -115,9 +113,11 @@ flow_by_years_asci_wide %>% distinct(ID) %>% dim # should be 37 gages match same
 # save flow data out for annual match
 save(flow_by_years_asci, flow_by_years_asci_wide, file="output_data/04_selected_flow_by_years_of_asci.RData")
 
+head(flow_por)
 
 # unique metrics? (should be 34)
 length(unique(flow_por$stat))
+unique(flow_por$stat)
 
 # make wide for join
 flow_por_wide <- flow_por %>% 
@@ -208,19 +208,7 @@ names(algae_asci_flow_porx)
 algae_asci_flow_porx <- algae_asci_flow_porx[,-c(21:44,50:61,63,64,65:100)] # remove FFMs as these are POR values
 
 # JOIN with Flow by algae Lag Years ----------------------------------------
-names(algae_asci_flow_porx)
-str(algae_asci_flow_yrs$YY)
-str(algae_asci_flow_porx$year)
-head(algae_asci_flow_yrs)
-dim(algae_asci_flow_yrs)
-head(algae_asci_flow_porx)
-dim(algae_asci_flow_porx)
-algae_asci_flow_porx$year
-algae_asci_flow_yrs$year.y
-algae_asci_flow_yrs$YY
-head(flow_by_years_asci_wide)
-names(algae_asci_flow_yrs)
-unique(flow_by_years_asci_wide$year)
+
 
 algae_asci_flow_yrs <- left_join(algae_asci_flow_porx, flow_by_years_asci_wide, by=c("ID")) 
 algae_asci_flow_yrs$YY <- as.numeric(as.character(algae_asci_flow_yrs$YY))
