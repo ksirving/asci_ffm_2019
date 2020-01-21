@@ -54,7 +54,7 @@ str(asci_scor)
 
 asci_scor_sites <- merge(algae_sites, asci_scor, by.x="SampleID_old", by.y="SampleID")
 # head(asci_scor_sites)
-# dim(asci_scor_sites) # 128764      4
+dim(asci_scor_sites) # 128764      4
 # str(algae_sites)
 #  lose ~2K Samples
 
@@ -64,17 +64,19 @@ dim(asci_scor_sites) #2625    4 - more sites here than the asci scores df as som
 #  remove NAs
 sum(is.na(asci_scor_sites)) # 969 some NAs from missing data in 0overE - keep MMIs from these sites? progress without but can change
 names(asci_scor_sites)
-asci_scor_sites <- asci_scor_sites[,-c(4,6,8,11)] # keep 11 to keep salinity
-asci_scor_sites <- na.omit(asci_scor_sites)
-# dim(asci_scor_sites) # 2270
+asci_scor_sites <- asci_scor_sites[,-c(4,6,8)] # keep 11 to keep salinity
+# asci_scor_sites <- na.omit(asci_scor_sites)
+dim(asci_scor_sites) # 2625
 
 
 # lose some sites if keep in OoverE metrics and salinity - 2260 (365 lost)
-# for now continue with most sites possible - just MMI and DO metrics. 
-# Ask ryan re salinity metric site loss
+# keep in and remove NAs in brt
 
-write.csv(asci_scor_sites, "output_data/asci_scores_coords.csv")
+write.csv(asci_scor_sites, "output_data/01_asci_scores_coords.csv")
 str(asci_scor_sites)
+head(asci_scor_sites) 
+sal_nas <- which(is.na(asci_scor_sites$Salinity.BF.richness))
+sal_nas
 # change from factor to character
 asci_scor_sites$SampleID_old <- as.character(asci_scor_sites$SampleID_old)
 
@@ -118,12 +120,12 @@ algae$sampledate = ymd(paste0(algae$YY,"-", algae$MM, "-",algae$DD))
 #  remove Rep 2 column 
 
 algae$Rep2 <- NULL
-sum(is.na(algae)) # 0 
+sum(is.na(algae)) # 510
 
 #  look at oldest date - to match with FFM
 sort(unique(as.Date(algae$sampledate)))[1] # 2007-06-05
 
-dim(algae) ## 2270
+dim(algae) ## 2625
 head(algae)
 
 # how many missing SampleID's?: 
@@ -140,7 +142,7 @@ sum(is.na(algae$sampledate))
 
 #  remove duplicates
 algae <- algae[!duplicated(algae$SampleID_old),]
-dim(algae) # 2223
+dim(algae) # 2587
 head(algae)
 
 ##### below code regarding reps - average?????? to be finished
@@ -190,8 +192,14 @@ head(algae)
 # 107     0.7571862   1.083255 2012-08-28 102PS0177_08/28/12
 
 #  remiove unwated columns and save
-
+#  which NAs are in salinity - to keep?
+sal_nas <- which(is.na(algae$Salinity.BF.richness))
+sal_nas
+algae[sal_nas,]
+sum(is.na(algae)) #509
+## many NAs in several variables. some repeated numbers e.g. 1.1751440 for hybrid MMI & DOC. remove all for now
+#
+algae <- na.omit(algae)
 algae <- algae[, -c(3:5)] # may change with rep decision
 head(algae)
-save(algae, file="output_data/clean_algae.RData") # data has mmi and DO, not salinity. can add salinity easily but will lose some sites
-
+save(algae, file="output_data/01_clean_algae.RData") 

@@ -33,7 +33,7 @@ library(tidylog)
 # 
 # load("output_data/algae_all_stations_comids.rda") # algae_segs_df - algae sites and comids
 # load("output_data/selected_h12_contain_algae_gage.rda") # sel_h12s_algae - huc 12s
-load("output_data/selected_nhd_flowlines_mainstems.rda") # mainstems_us, mainstems_ds mainstems us/ds
+load("output_data/02_selected_nhd_flowlines_mainstems.rda") # mainstems_us, mainstems_ds mainstems us/ds
 # load("output_data/paired_gages_algae_merged.RData") # sel_algae_gages - 126 algae sites, 40 gages
 # load("output_data/paired_only_gages_algae.RData") # sel_gages_algae paired gages - no algae data
 load("output_data/03_gages_comids_algae_mets.RData") # algae_coms asci metrics, gages and comids
@@ -46,10 +46,11 @@ load("output_data/04_algae_gage_flow_metrics_POR.RData") #algae_asci_flow_por - 
 #  organise data sets
 
 load("output_data/03_gages_comids_algae_mets.RData") # algae_coms asci metrics, gages and comids
-# names(algae_coms)
+names(algae_coms)
+head(algae_coms)
 # need algae_coms with ds/us info
 
-algae_coms_red <- algae_coms[,c(1:6, 14:16, 58, 61)]
+algae_coms_red <- algae_coms[,c(1:6, 15:17, 59, 62)]
 save(algae_coms_red, file= "output_data/05_gages_comids_algae.RData") # algae sites, gages, hucs and comids
 
 # re order cols & drop duplicates
@@ -58,7 +59,7 @@ algae_coms_red <- algae_coms_red %>%
          h12_area_sqkm, ID:to_gage, geometry) %>% 
   distinct(StationID, ID, .keep_all=TRUE) 
 
-load("output_data/selected_nhd_flowlines_mainstems.rda")
+load("output_data/02_selected_nhd_flowlines_mainstems.rda")
 # make a mainstems all file
 mainstems_all <- rbind(mainstems_us, mainstems_ds)
 rm(mainstems_ds, mainstems_us)
@@ -72,20 +73,20 @@ mapviewOptions(basemaps=basemapsList)
 
 
 load("output_data/04_algae_gage_flow_metrics_POR.RData") 
-
-algae_asci_flow_por <- algae_asci_flow_por[, -c(95,96, 59,60,47:57, 17:40)]
-names(algae_asci_flow_por)[20:21] <- c("maxYr", "minYr")
+names(algae_asci_flow_por)
+algae_asci_flow_por <- algae_asci_flow_por[, -c(96,97, 60,61,48:58, 18:41)]
+names(algae_asci_flow_por)[21:22] <- c("maxYr", "minYr")
 
 save(algae_asci_flow_por, file="output_data/05_algae_metrics_with_FFM_POR.RData")
 
 
-load("output_data/paired_gages_algae_merged.RData") # sel_algae_gages - 126 algae sites, 40 gages
-load("output_data/paired_only_gages_algae.RData") # sel_gages_algae paired gages - no algae data
+load("output_data/02_paired_gages_algae_merged.RData") # sel_algae_gages - 126 algae sites, 40 gages
+load("output_data/02_paired_only_gages_algae.RData") # sel_gages_algae paired gages - no algae data
 #  gages paired with algae sites. needed for spatial join
 
 head(sel_algae_gages)
 names(sel_algae_gages)
-sel_algae_gages <- sel_algae_gages[,c(1:15,40:45,57)]
+sel_algae_gages <- sel_algae_gages[,c(1:16,41:46,58)]
 save(sel_algae_gages, file="output_data/05_paired_gages_algaesites_merged.RData")
 
 head(sel_gages_algae)

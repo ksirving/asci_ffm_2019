@@ -12,9 +12,9 @@ setwd("/Users/katieirving/Documents/git/asci_ffm_2019")
 
 #  load clean algae data
 
-load(file="output_data/clean_algae.RData") # algae
-head(algae) # rep here
-dim(algae)
+load(file="output_data/01_clean_algae.RData") # algae
+head(algae) 
+dim(algae) #2231   13
 
 ## convert to spatial for pairing - 1) with bmi (overlap), 2) ref gauges
 
@@ -23,11 +23,10 @@ algae$Latitude <- as.numeric(as.character(algae$Latitude))
 algae$Longitude <- as.numeric(as.character(algae$Longitude))
 
 #  remove NAs
-sum(is.na(algae)) #50 - already NAs but not registering until formatted to a number
+sum(is.na(algae)) # 50 x NAs but not registering until formatted to a number, remaining are nas fro some variables
 #  where are the NAs? 
 na_ind <- which(is.na(algae)) 
 na_ind
-algae[na_ind,]
 
 #  check in unformatted dataset for NAs 
 # 
@@ -45,9 +44,8 @@ algae <- na.omit(algae)
 algae <- algae %>% 
   st_as_sf(coords=c("Longitude", "Latitude"), crs=4326, remove=F) # define coords to make spatial
 
-save(algae, file="output_data/algae_spatial.RData")
+save(algae, file="output_data/02_algae_spatial.RData")
 
-head(algae)
 #  component metrics for Algae - only OoverE & MMI for diatoms and soft bodied
 #  awaiting dataset
 
@@ -63,7 +61,7 @@ str(bmi_clean)
 bmi_sites <- bmi_clean[,c(1,6:7)]
 # dim(bmi_sites) # 310216      3
 bmi_sites <- distinct(bmi_sites)
-save(bmi_sites, file="output_data/bmi_sites.RData") 
+save(bmi_sites, file="output_data/02_bmi_sites.RData") 
 dim(bmi_sites) # 2935    3
 
 
@@ -156,17 +154,17 @@ length(unique(factor(sel_algae_gages$HUC_12))) # 40 unique h12
 length(unique(sel_algae_gages$ID)) # 40 unique gages
 length(unique(sel_algae_gages$SampleID_old)) # StationID- 126 unique algae sites - 164 when treating each rep as individual samples
 # so 126 possible algae sites, 40 gages, in 40 HUC12's 
-save(sel_algae_gages, file="output_data/paired_gages_algae_merged.RData") #algae data plus gage and huc12 
+save(sel_algae_gages, file="output_data/02_paired_gages_algae_merged.RData") #algae data plus gage and huc12 
 
 # how many gages? 40
 sel_gages_algae <- gages_final2 %>% filter(ID %in% sel_algae_gages$ID)
 head(sel_gages_algae)
 dim(sel_gages_algae) 
-save(sel_gages_algae, file="output_data/paired_only_gages_algae.RData") # same but only the paired gages n=40
+save(sel_gages_algae, file="output_data/02_paired_only_gages_algae.RData") # same but only the paired gages n=40
 # select H12s that have points inside:
 sel_h12_algae <- h12[sel_algae_gages, ]
 # although coordinates are longitude/latitude, st_intersects assumes that they are planar
-save(sel_h12_algae, file="output_data/selected_h12_contain_algae_gage.rda")
+save(sel_h12_algae, file="output_data/02_selected_h12_contain_algae_gage.rda")
 
 # Get algae COMIDs ----------------------------------------------------------
 #  COMIDS for algae??
@@ -280,25 +278,25 @@ head(bmi_h12)
 sel_algae_bmi <- st_join(algae_h12, bmi_h12, by="HUC_12", left=F) #%>% distinct(StationCode, .keep_all = T)
 
 # ?st_join
-dim(sel_algae_bmi) # 738
+dim(sel_algae_bmi) # 736
 
 
 # number of unique h12s?
-length(unique(factor(sel_algae_bmi$HUC_12.x))) # 391 unique h12
-length(unique(sel_algae_bmi$StationCode)) # 529 unique bmi
-length(unique(sel_algae_bmi$StationID)) #  529 unique algae sites
-# so 529 possible algae sites, 529 bmi sites, in 391 HUC12's ??????? check this!! 
+length(unique(factor(sel_algae_bmi$HUC_12.x))) # 390 unique h12
+length(unique(sel_algae_bmi$StationCode)) # 527 unique bmi
+length(unique(sel_algae_bmi$StationID)) #  527 unique algae sites
+# so 527 possible algae sites, 527 bmi sites, in 390 HUC12's ??????? check this!! 
 
-# how many bmi? 514
+# how many bmi? 512
 sel_bmi_algae <- bmi_sites %>% filter(StationCode %in% sel_algae_bmi$StationID)
 dim(sel_bmi_algae)
 
 
 # select H12s that have points inside:
 sel_h12_algae <- h12[sel_algae_bmi, ]
-dim(sel_h12_algae) # 918
+dim(sel_h12_algae) # 390
 # although coordinates are longitude/latitude, st_intersects assumes that they are planar
-save(sel_h12_algae, file="output_data/selected_h12_contain_algae_bmi.rda")
+save(sel_h12_algae, file="output_data/02_selected_h12_contain_algae_bmi.rda")
 
 # count sites that don't match per algae data then per bmi data
 sel_algae_bmi <- st_join(algae_h12, bmi_h12, by="HUC_12") #%>% distinct(StationCode, .keep_all = T)
@@ -402,7 +400,7 @@ head(sel_algae_gages)
 algae_segs<- sel_algae_gages[,c(2:5)]
 algae_segs$comid <- NA
 head(algae_segs) #reps here
-dim(algae_segs) #126 - 164 with reps
+dim(algae_segs) #126 - 162 with reps
 
   
 # get the comid for the BMI points w no comids using purrr
@@ -429,9 +427,7 @@ algae_segs_df <- algae_segs_df[!duplicated(algae_segs_df),] #several duplicates 
 
 
 # save back out:
-save(algae_segs_df, file="output_data/algae_all_stations_comids.rda")
-
-
+save(algae_segs_df, file="output_data/02_algae_all_stations_comids.rda")
 
 
 # GET UPSTREAM FLOWLINES --------------------------------------------------
@@ -440,7 +436,7 @@ save(algae_segs_df, file="output_data/algae_all_stations_comids.rda")
 sel_algae_sf <- st_transform(sel_algae_gages, crs=3310) # use CA Teal albs metric
 sel_gages_sf <- st_transform(sel_gages_algae, crs=3310)
 
-save(sel_gages_sf, sel_algae_sf, file = "output_data/selected_gages_algae_sf_3310.rda")
+save(sel_gages_sf, sel_algae_sf, file = "output_data/02_selected_gages_algae_sf_3310.rda")
 
 usgs_segs <- sel_gages_algae %>% split(.$ID) %>%
   map(~discover_nhdplus_id(.x$geometry))
@@ -500,16 +496,16 @@ mainstems_us <- do.call(what = sf:::rbind.sf,
 
 rm(mainstems_flat_ds, mainstems_flat_us)
 
-save(mainstems_us, mainstems_ds, file = "output_data/selected_nhd_flowlines_mainstems.rda")
+save(mainstems_us, mainstems_ds, file = "output_data/02_selected_nhd_flowlines_mainstems.rda")
 
 mapview(mainstems_ds) + mapview(mainstems_us, color="purple")
 
 
 # RELOAD AND MAP ----------------------------------------------------------
 
-load("output_data/paired_gages_algae.RData")
-load("output_data/selected_nhd_flowlines_mainstems.rda")
-load("output_data/selected_h12_contain_algae_gage.rda")
+load("output_data/02_paired_gages_algae_merged.RData")
+load("output_data/02_selected_nhd_flowlines_mainstems.rda")
+load("output_data/02_selected_h12_contain_algae_gage.rda")
 
 mapview(mainstems_ds, color="slateblue", legend=F) +
   mapview(mainstems_us, color="darkblue", legend=F) +

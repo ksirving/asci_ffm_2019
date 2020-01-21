@@ -32,11 +32,11 @@ drh_plot  # display the plot
 # upload functional flow metric data - existing 
 
 #  list gages
-load(file="output_data/paired_only_gages_algae.RData")
+load(file="output_data/02_paired_only_gages_algae.RData")
 # head(sel_gages_algae) # 40 gauges paired with algae
 # dim(sel_gages_algae)
 gages_list <- sel_gages_algae$gage
-sum(is.na(gages_list)) # 3 NAs - data but no gage ID - ill not match with flow metric data. fix later!
+sum(is.na(gages_list)) # 2 NAs - data but no gage ID - ill not match with flow metric data. fix later!
 # sel_gages_algae[18,]
 
 # ffmets <- read.csv("input_data/gages_ref_223_period_record.csv")
@@ -79,10 +79,10 @@ flow_por <- flow_long %>% select(-YrRange, -gage, -year, -stream_class) %>% grou
 
 # need to pull 2 years prior, 1 year prior, and same year as BMI site data
 
-load("output_data/paired_gages_algae_merged.RData") # sel_algae_gages - 126 algae sites, 40 gages
+load("output_data/02_paired_gages_algae_merged.RData") # sel_algae_gages - 126 algae sites, 40 gages
 head(sel_algae_gages)
 names(sel_algae_gages)
-asci_mets <- sel_algae_gages[,c(1:12)] 
+asci_mets <- sel_algae_gages[,c(1:13)] 
 
 head(asci_mets)
 
@@ -129,12 +129,12 @@ flow_por_wide <- flow_por %>%
 
 #  algae & gage data
 
-load("output_data/algae_all_stations_comids.rda")
-load("output_data/clean_algae.RData")
-load("output_data/paired_gages_algae_merged.RData")
-load("output_data/selected_nhd_flowlines_mainstems.rda") #mainstems_ds us
-load("output_data/selected_h12_contain_algae_gage.rda")
-load("output_data/paired_only_gages_algae.RData")
+load("output_data/02_algae_all_stations_comids.rda")
+load("output_data/01_clean_algae.RData")
+load("output_data/02_paired_gages_algae_merged.RData")
+load("output_data/02_selected_nhd_flowlines_mainstems.rda") #mainstems_ds us
+load("output_data/02_selected_h12_contain_algae_gage.rda")
+load("output_data/02_paired_only_gages_algae.RData")
 load("output_data/03_paired_gages_algae_comid.RData") #algae_com_gage
 
 
@@ -173,6 +173,7 @@ algae_coms <- rbind(algae_ds_coms, algae_us_coms)
 algae_coms %>% st_drop_geometry() %>% distinct(StationID, ID) %>% tally() #74
 algae_coms %>% st_drop_geometry() %>% distinct(comid) %>% tally() #61
 head(algae_coms)
+names(algae_coms)
 # dim(algae_coms) # 120
 # potential sites:
 #bmi_coms %>% View()
@@ -180,7 +181,7 @@ head(algae_coms)
 # rm old layer:
 rm(algae_ds_coms, algae_us_coms)
 
-
+save(algae_coms, file="output_data/03_gages_comids_algae_mets.RData")
 # #  combine with flow data POR
 # 
 # # Join with Flow POR ------------------------------------------------------
@@ -199,6 +200,7 @@ length(unique(algae_asci_flow_por_overlap$ID)) # 28 gages
 
 save(algae_asci_flow_por, file="output_data/04_algae_gage_flow_metrics_POR.RData")
 
+######## lag and annual here!!!!!!!!!!!!!
 # JOIN with Flow by algae Lag Years ----------------------------------------
 names(algae_asci_flow_porx)
 str(algae_asci_flow_porx$YY)

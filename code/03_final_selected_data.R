@@ -17,12 +17,12 @@ library(lubridate)
 # Load Data ---------------------------------------------------------------
 
 
-load("output_data/algae_all_stations_comids.rda") # algae_segs_df - algae sites and comids
-load("output_data/clean_algae.RData") # algae - all data
-load("output_data/paired_gages_algae_merged.RData") # sel_algae_gages - 126 algae sites, 40 gages
-load("output_data/selected_nhd_flowlines_mainstems.rda") # mainstems_us, mainstems_ds mainstems us/ds
-load("output_data/selected_h12_contain_algae_gage.rda") # sel_h12s_algae - huc 12s
-load("output_data/paired_only_gages_algae.RData") # sel_gages_algae paired gages - no algae data
+load("output_data/02_algae_all_stations_comids.rda") # algae_segs_df - algae sites and comids
+load("output_data/01_clean_algae.RData") # algae - all data
+load("output_data/02_paired_gages_algae_merged.RData") # sel_algae_gages - 126 algae sites, 40 gages
+load("output_data/02_selected_nhd_flowlines_mainstems.rda") # mainstems_us, mainstems_ds mainstems us/ds
+load("output_data/02_selected_h12_contain_algae_gage.rda") # sel_h12s_algae - huc 12s
+load("output_data/02_paired_only_gages_algae.RData") # sel_gages_algae paired gages - no algae data
 
 # load mapview bases
 # set background basemaps:
@@ -37,12 +37,12 @@ mapviewOptions(basemaps=basemapsList)
 head(algae_segs_df)
 head(sel_algae_gages)
 dim(algae_segs_df)
-unique(sel_algae_gages$ID) # 40
-# unique(sel_algae_gages$gage) # 40
+unique(sel_algae_gages$ID) # 39
+# unique(sel_algae_gages$gage) # 39
 
 algae_com_gage <- merge(algae_segs_df, sel_algae_gages, by="StationID")
 head(algae_com_gage) # 126 sites & 40 gages
-dim(algae_com_gage) #164
+dim(algae_com_gage) #162
 algae_com_gage <- algae_com_gage %>% 
   st_as_sf(coords=c("Latitude", "Longitude"), crs=4326, remove=F) # define coords to make spatial
 
@@ -142,7 +142,7 @@ head(algae_com_gage) # want stationid, comid, sampleid, lat, long, all metrics
 names(algae_com_gage)
 asci_mets <- algae_com_gage[,c(1:13)]
 head(asci_mets)
-dim(asci_mets) # 164
+dim(asci_mets) # 162
 asci_mets <- as.data.frame(asci_mets)
 # 
 # # # match against existing sites:
