@@ -36,7 +36,7 @@ asci_scor <- asci_comp
 #  upload site details - for coordinates
 
 algae_raw <- read.csv("input_data/algae.bug.data.10172019.csv", header = T)
-# head(algae_raw)
+head(algae_raw)
 # names(algae_raw)
 # dim(algae_raw)# 130753     26
 
