@@ -88,10 +88,13 @@ library(spatstat)
 ## look at api gage data - calculate ffm?
 
 ### 250 ref gauges from Ryan - bmi_ffm_links repo
-load(file="input_data/gages_final_250.rda")
-# head(gages_final)
-# dim(gages_final)
-# str(gages_final)
+# load(file="input_data/gages_final_250.rda") ## reference gages
+load(file="input_data/01_gages_reference_final_250.rda") # ref gages
+load(file="input_data/01_gages2_all_ca_sf.rda") # other gages
+head(gage_223)
+head(gages2_sf)
+dim(gages2_sf)
+dim(gage_223)
 
 # update one col
 gages_final <- gages_final %>% 
