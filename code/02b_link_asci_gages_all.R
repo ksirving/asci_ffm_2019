@@ -10,68 +10,18 @@ library(raster)
 
 setwd("/Users/katieirving/Documents/git/asci_ffm_2019")
 
-#  load clean algae data
 
-load(file="output_data/01_clean_algae.RData") # algae
-head(algae) 
-dim(algae) #2231   13
-
-## convert to spatial for pairing - 1) with bmi (overlap), 2) ref gauges
-
-#  coords into numeric
-algae$Latitude <- as.numeric(as.character(algae$Latitude))
-algae$Longitude <- as.numeric(as.character(algae$Longitude))
-
-#  remove NAs
-sum(is.na(algae)) # 50 x NAs but not registering until formatted to a number, remaining are nas fro some variables
-#  where are the NAs? 
-na_ind <- which(is.na(algae)) 
-na_ind
-
-#  check in unformatted dataset for NAs 
-# 
-# load(file="output_data/clean_algae.RData") # algae
-# head(algae)
-# sum(is.na(algae))
-# algae[na_ind,] # just NAs - full rows
-
-algae <- na.omit(algae)
-
-#  spatial point df
-# ?st_as_sf
-# str(algae)
-
-algae <- algae %>% 
-  st_as_sf(coords=c("Longitude", "Latitude"), crs=4326, remove=F) # define coords to make spatial
-
-save(algae, file="output_data/02_algae_spatial.RData")
-
-#  component metrics for Algae - only OoverE & MMI for diatoms and soft bodied
-#  awaiting dataset
-
-#  bug data
-
-load(file="input_data/bmi_cleaned_all.rda")
-head(bmi_clean)
-str(bmi_clean)
-# ?distinct
-#  which is bmi site data from bmi_ffm? in script 03 it's bmi_final_station_list.rda but not in output data file??
-#  get df with only sites
-
-bmi_sites <- bmi_clean[,c(1,6:7)]
-# dim(bmi_sites) # 310216      3
-bmi_sites <- distinct(bmi_sites)
-dim(bmi_sites) # 2935    3
-
-
-bmi_sites <- bmi_sites %>% 
-  st_as_sf(coords=c("longitude", "latitude"), crs=4326, remove=F) # define coords to make spatial
-
-save(bmi_sites, file="output_data/02_bmi_sites.RData") 
+# data needed
+load(file="output_data/02_algae_spatial.RData") # algae - asci data spatial
+load(file="output_data/02_bmi_sites.RData") # bmi_sites bug data - spatial
+load(file="input_data/00_usgs_ca_all_daily_flow_gages.rda") # ca_usgs_gages  all gauges CA
+load(file="input_data/huc12_sf.rda") # h12 - huc 12 data
 
 #  algae and bug sites 
-head(algae) # rep here
+head(algae) 
 head(bmi_sites)
+head(ca_usgs_gages)
+head(h12)
 
 #  pair sites
 #  distance between sites
@@ -88,59 +38,57 @@ library(spatstat)
 # subset full algae dataset to match asci scores data?? i.e. file="output_data/clean_algae.RData"
 ## look at api gage data - calculate ffm?
 
-### 250 ref gauges from Ryan - bmi_ffm_links repo
-# load(file="input_data/gages_final_250.rda") ## reference gages
-load(file="input_data/01_gages_reference_final_250.rda") # ref gages
-load(file="input_data/01_gages2_all_ca_sf.rda") # other gages
-head(gages_final)
-head(gages2_sf)
-dim(gages2_sf)
-dim(gages_final)
+# add watershed area in sqkm
+h12 <- h12 %>% 
+  mutate(h12_area_sqkm=Shape_Area/1e6) %>% 
+  st_transform(4269)
 
-# update one col
-gages_final <- gages_final %>% 
-  mutate(REF_END_YEAR=as.integer(REF_END_YEAR))
+# update start year and end year and make spatial
+gages <- ca_usgs_gages %>% 
+  mutate(end_yr = as.integer(year(date_end))) 
+
+gages <- gages %>% 
+  mutate(start_yr = as.integer(year(date_begin)))
+
+
+# make spatial
+algae <- algae %>% 
+  st_as_sf(coords=c("longitude", "latitude"), crs=4326, remove=F) %>% 
+  st_transform(4269)
+
+bmi_sites <- bmi_sites %>% 
+  st_transform(4269)
 
 #  check same crs
 st_crs(bmi_sites)
 st_crs(algae)
-st_crs(gages_final)
-
+st_crs(gages)
+st_crs(h12)
 
 # HUC 12 data - to check how many in each huc 12
-
-load(file="input_data/huc12_sf.rda")
 str(h12)
 
-# add watershed area in sqkm
-h12 <- h12 %>% 
-  mutate(h12_area_sqkm=Shape_Area/1e6)
-
-## what is bmi_clean for?
-
-# so 98 gages meet temporal scale of algae  - do they have 10 years of data?
-gages_final2 <- gages_final %>% filter(REF_END_YEAR>2007)
-dim(gages_final2)
-head(gages_final2)
-gages_final2 <- as.data.frame(gages_final2)
-gages_final2 <- gages_final2 %>% 
-  st_as_sf(coords=c("LONGITUDE", "LATITUDE"), crs=4326, remove=F) # define coords to make spatial
-
+# so 1062 gages meet temporal scale of algae  - do they have 10 years of data?
+gages2 <- gages %>% filter(end_yr>2007)
+dim(gages2)
+head(gages2)
 
 # Intersect algae/Gages by H12 ----------------------------------------------
 
 # how many 
 # Add H12 to points to algae and Gages (adds ATTRIBUTES, retains ALL pts if left=TRUE)
 algae_h12 <- st_join(algae, left = FALSE, h12[c("HUC_12","h12_area_sqkm")]) #
-head(algae_h12) #rep here
+head(algae_h12) 
+
+
 # although coordinates are longitude/latitude, st_intersects assumes that they are planar
 # ?st_join
-gages_h12 <- st_join(gages_final2, left=FALSE, h12[c("HUC_12")]) #%>% 
-  # select(ID, HUC_12) %>% as_tibble() %>% select(-geometry)
+gages_h12 <- st_join(gages2, left=FALSE, h12[c("HUC_12")]) #%>% 
+
 # class(gages_h12)
 # class(algae_h12)
 # head(algae_h12)
-# head(gages_h12)
+head(gages_h12)
 # names(gages_h12)
 # names(algae_h12)
 
@@ -150,25 +98,31 @@ gages_h12 <- as.data.frame(gages_h12)
 
 # now join based on H12: how many are in same?
 sel_algae_gages <- inner_join(algae_h12, gages_h12, by="HUC_12") %>% distinct(SampleID_old, .keep_all = T) #StationID if not applying reps as individual samples
-dim(sel_algae_gages) #164
+dim(sel_algae_gages) # 778
 head(sel_algae_gages)
 
-# number of unique h12s?
-length(unique(factor(sel_algae_gages$HUC_12))) # 40 unique h12
-length(unique(sel_algae_gages$ID)) # 40 unique gages
-length(unique(sel_algae_gages$SampleID_old)) # StationID- 126 unique algae sites - 164 when treating each rep as individual samples
-# so 126 possible algae sites, 40 gages, in 40 HUC12's 
-save(sel_algae_gages, file="output_data/02_paired_gages_algae_merged.RData") #algae data plus gage and huc12 
+# check end years -
+sort(unique(sel_algae_gages$end_yr))
 
-# how many gages? 40
-sel_gages_algae <- gages_final2 %>% filter(ID %in% sel_algae_gages$ID)
+## 2008-2019 - whats the minimum overlap with algae? 
+
+# number of unique h12s?
+length(unique(factor(sel_algae_gages$HUC_12))) # 226 unique h12
+length(unique(sel_algae_gages$site_id)) # 226 unique gages
+length(unique(sel_algae_gages$SampleID_old)) #  - 778 algae sites when treating each rep as individual samples
+length(unique(sel_algae_gages$StationID))  #StationID- 602 unique algae sites 
+# so 778 possible algae sites, 226 gages, in 226 HUC12's 
+save(sel_algae_gages, file="output_data/02_paired_all_gages_algae_merged.RData") #algae data plus gage and huc12 
+
+# how many gages? 226
+sel_gages_algae <- gages2 %>% filter(site_id %in% sel_algae_gages$site_id)
 head(sel_gages_algae)
 dim(sel_gages_algae) 
-save(sel_gages_algae, file="output_data/02_paired_only_gages_algae.RData") # same but only the paired gages n=40
+save(sel_gages_algae, file="output_data/02_paired_only_all_gages_algae.RData") # same but only the paired gages n=40
 # select H12s that have points inside:
 sel_h12_algae <- h12[sel_algae_gages, ]
 # although coordinates are longitude/latitude, st_intersects assumes that they are planar
-save(sel_h12_algae, file="output_data/02_selected_h12_contain_algae_gage.rda")
+save(sel_h12_algae, file="output_data/02_selected_h12_contain_algae_all_gage.rda")
 
 # Get algae COMIDs ----------------------------------------------------------
 #  COMIDS for algae??
@@ -406,7 +360,7 @@ algae_segs$comid <- NA
 head(algae_segs) #reps here
 dim(algae_segs) #126 - 162 with reps
 
-  
+
 # get the comid for the BMI points w no comids using purrr
 
 algae_missing_coms <- algae_segs %>% st_drop_geometry() %>% as.data.frame()
