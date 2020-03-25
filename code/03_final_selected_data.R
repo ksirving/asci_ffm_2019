@@ -145,7 +145,7 @@ head(asci_mets)
 dim(asci_mets) # 778
 asci_mets <- as.data.frame(asci_mets) ## do I need to save this?
 
-save(algae_coms, file="output_data/03_algae_mets.RData")
+save(asci_mets, file="output_data/03_algae_mets.RData")
 
 
 # 

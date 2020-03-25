@@ -18,7 +18,7 @@ library(tidylog)
 
 # load("output_data/algae_all_stations_comids.rda") # algae_segs_df - algae sites and comids
 # load("output_data/selected_h12_contain_algae_gage.rda") # sel_h12s_algae - huc 12s
-load("output_data/02_selected_nhd_flowlines_mainstems.rda") # mainstems_us, mainstems_ds mainstems us/ds
+load("output_data/02b_selected_nhd_flowlines_mainstems_all_gages.rda") # mainstems_us, mainstems_ds mainstems us/ds
 # load("output_data/paired_gages_algae_merged.RData") # sel_algae_gages - 126 algae sites, 40 gages
 # load("output_data/paired_only_gages_algae.RData") # sel_gages_algae paired gages - no algae data
 load("output_data/03_gages_comids_algae_mets.RData") # algae_coms asci metrics, gages and comids
