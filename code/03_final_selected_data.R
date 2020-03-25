@@ -17,12 +17,12 @@ library(lubridate)
 # Load Data ---------------------------------------------------------------
 
 
-load("output_data/02_algae_all_stations_comids.rda") # algae_segs_df - algae sites and comids
+load("output_data/02b_algae_all_stations_comids.rda") # algae_segs_df - algae sites and comids
 load("output_data/01_clean_algae.RData") # algae - all data
-load("output_data/02_paired_gages_algae_merged.RData") # sel_algae_gages - 126 algae sites, 40 gages
-load("output_data/02_selected_nhd_flowlines_mainstems.rda") # mainstems_us, mainstems_ds mainstems us/ds
-load("output_data/02_selected_h12_contain_algae_gage.rda") # sel_h12s_algae - huc 12s
-load("output_data/02_paired_only_gages_algae.RData") # sel_gages_algae paired gages - no algae data
+load("output_data/02b_paired_all_gages_algae_merged.RData") # sel_algae_gages 
+load("output_data/02b_selected_nhd_flowlines_mainstems_all_gages.rda") # mainstems_us, mainstems_ds mainstems us/ds
+load("output_data/02b_selected_h12_contain_algae_all_gage.rda") # sel_h12s_algae - huc 12s
+load("output_data/02b_paired_only_all_gages_algae.RData") # sel_gages_algae paired gages - no algae data
 
 # load mapview bases
 # set background basemaps:
@@ -37,14 +37,14 @@ mapviewOptions(basemaps=basemapsList)
 head(algae_segs_df)
 head(sel_algae_gages)
 dim(algae_segs_df)
-unique(sel_algae_gages$ID) # 39
-# unique(sel_algae_gages$gage) # 39
+unique(sel_algae_gages$site_id) # 226
+
 
 algae_com_gage <- merge(algae_segs_df, sel_algae_gages, by="StationID")
-head(algae_com_gage) # 126 sites & 40 gages
-dim(algae_com_gage) #162
+head(algae_com_gage) 
+dim(algae_com_gage) # 778
 algae_com_gage <- algae_com_gage %>% 
-  st_as_sf(coords=c("Latitude", "Longitude"), crs=4326, remove=F) # define coords to make spatial
+  st_as_sf(coords=c("Latitude", "Longitude"), crs=4269, remove=F) # define coords to make spatial
 
 save(algae_com_gage, file="output_data/03_paired_gages_algae_comid.RData" ) # gages us and ds mets
 # all stations us of gage:
@@ -124,8 +124,8 @@ algae_ds_coms <- algae_com_gage %>% filter(comid %in% mainstems_ds$nhdplus_comid
 algae_coms <- rbind(algae_ds_coms, algae_us_coms)
 
 # distinct stations:
-algae_coms %>% st_drop_geometry() %>% distinct(SampleID_old, ID) %>% tally() #74
-algae_coms %>% st_drop_geometry() %>% distinct(comid) %>% tally() #61
+algae_coms %>% st_drop_geometry() %>% distinct(SampleID_old, site_id) %>% tally() #669
+algae_coms %>% st_drop_geometry() %>% distinct(comid) %>% tally() #421
 head(algae_coms)
 # potential sites:
 #bmi_coms %>% View()
@@ -142,8 +142,12 @@ head(algae_com_gage) # want stationid, comid, sampleid, lat, long, all metrics
 names(algae_com_gage)
 asci_mets <- algae_com_gage[,c(1:13)]
 head(asci_mets)
-dim(asci_mets) # 162
-asci_mets <- as.data.frame(asci_mets)
+dim(asci_mets) # 778
+asci_mets <- as.data.frame(asci_mets) ## do I need to save this?
+
+save(algae_coms, file="output_data/03_algae_mets.RData")
+
+
 # 
 # # # match against existing sites:
 # algae_asci <- inner_join(algae_coms,asci_mets, by=c("StationID"))
