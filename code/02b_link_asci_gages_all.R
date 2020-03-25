@@ -112,13 +112,13 @@ length(unique(sel_algae_gages$site_id)) # 226 unique gages
 length(unique(sel_algae_gages$SampleID_old)) #  - 778 algae sites when treating each rep as individual samples
 length(unique(sel_algae_gages$StationID))  #StationID- 602 unique algae sites 
 # so 778 possible algae sites, 226 gages, in 226 HUC12's 
-save(sel_algae_gages, file="output_data/02_paired_all_gages_algae_merged.RData") #algae data plus gage and huc12 
+save(sel_algae_gages, file="output_data/02b_paired_all_gages_algae_merged.RData") #algae data plus gage and huc12 
 
 # how many gages? 226
 sel_gages_algae <- gages2 %>% filter(site_id %in% sel_algae_gages$site_id)
 head(sel_gages_algae)
 dim(sel_gages_algae) 
-save(sel_gages_algae, file="output_data/02_paired_only_all_gages_algae.RData") # same but only the paired gages n=40
+save(sel_gages_algae, file="output_data/02b_paired_only_all_gages_algae.RData") # same but only the paired gages n=40
 # select H12s that have points inside:
 sel_h12_algae <- h12[sel_algae_gages, ]
 # although coordinates are longitude/latitude, st_intersects assumes that they are planar
@@ -254,7 +254,7 @@ dim(sel_bmi_algae)
 sel_h12_algae <- h12[sel_algae_bmi, ]
 dim(sel_h12_algae) # 390
 # although coordinates are longitude/latitude, st_intersects assumes that they are planar
-save(sel_h12_algae, file="output_data/02_selected_h12_contain_algae_bmi.rda")
+save(sel_h12_algae, file="output_data/02b_selected_h12_contain_algae_bmi.rda")
 
 # count sites that don't match per algae data then per bmi data
 sel_algae_bmi <- st_join(algae_h12, bmi_h12, by="HUC_12") #%>% distinct(StationCode, .keep_all = T)
@@ -385,7 +385,7 @@ algae_segs_df <- algae_segs_df[!duplicated(algae_segs_df),] #several duplicates 
 
 
 # save back out:
-save(algae_segs_df, file="output_data/02_algae_all_stations_comids.rda")
+save(algae_segs_df, file="output_data/02b_algae_all_stations_comids.rda")
 # head(sel_gages_algae)
 # head(sel_algae_gages)
 # dim(sel_gages_algae) #226
@@ -506,12 +506,14 @@ mapview(mainstems_ds) + mapview(mainstems_us, color="purple")
 
 # RELOAD AND MAP ----------------------------------------------------------
 
-load("output_data/02_paired_all_gages_algae_merged.RData")
+load("output_data/02b_paired_all_gages_algae_merged.RData")
 load("output_data/02b_selected_nhd_flowlines_mainstems_all_gages.rda")
 load("output_data/02b_selected_h12_contain_algae_all_gage.rda")
+load("output_data/02b_paired_only_all_gages_algae.RData")
 
 mapview(mainstems_ds, color="slateblue", legend=F) +
   mapview(mainstems_us, color="darkblue", legend=F) +
   mapview(sel_gages_algae, col.regions="purple", layer.name="Gages", cex=8) + 
   mapview(sel_algae_gages, col.regions="orange", layer.name="Algae", cex=6)
 
+## all present, includes gauges/algae sites not on the main stems
