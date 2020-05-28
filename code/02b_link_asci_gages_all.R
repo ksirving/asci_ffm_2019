@@ -22,7 +22,7 @@ head(algae)
 head(bmi_sites)
 head(ca_usgs_gages)
 head(h12)
-
+length(unique(ca_usgs_gages$site_id)) ## 2401
 #  pair sites
 #  distance between sites
 
@@ -185,7 +185,7 @@ sel_closest_sf <- left_join(sel_closest, sel_algae_sf,  by=c("StationID")) %>%
 
 
 # fast search for radius 
-sel_closest_5k <- nn2(sel_algae_coords[,1:2], sel_graph_coords, k=3, searchtype = "radius", radius = 5000) # in meters
+sel_closest_5k <- nn2(sel_algae_coords[,1:2], sel_graph_coords, k=3, searchtype = "radius", radius = 10000) # in meters - changed to 10km
 sel_closest_5k <- sapply(sel_closest_5k, cbind) %>% as_tibble() %>% 
   left_join(., as_tibble(sel_algae_coords[,c(3:4)]), by=c("nn.idx"="V3")) %>% dplyr::rename(StationID=V4) %>% 
   # filter NAs
@@ -201,126 +201,126 @@ m2 <- mapview(sel_algae_gages, col.regions="orange", layer.name="Algae", alpha=0
   mapview(sel_gages_algae, col.regions="blue", layer.name="Gages", cex=3, alpha=0.5) + 
   mapview(sel_h12_algae, layer="H12", color="dodgerblue", col.regions="cyan", alpha=0.8, lwd=1) +
   mapview(sel_closest_sf, layer.name="Nearest Algae site to Gage", cex=9, col.regions="maroon") +
-  mapview(sel_closest_5k_sf, layer.name="5k Radius Algae to Gage", cex=9, col.regions="salmon")
+  mapview(sel_closest_5k_sf, layer.name="10k Radius Algae to Gage", cex=9, col.regions="salmon")
 
 # add measure option  
 m2@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
 
-#### # Intersect algae/bmi by H12 ----------------------------------------------
-
-head(algae)
-head(bmi_sites)
-dim(bmi_sites)
-# how many 
-# Add H12 to points to algae and bmi (adds ATTRIBUTES, retains ALL pts if left=TRUE)
-algae_h12 <- st_join(algae, left = FALSE, h12[c("HUC_12","h12_area_sqkm")]) #
-# although coordinates are longitude/latitude, st_intersects assumes that they are planar
-
-bmi_h12 <- st_join(bmi_sites, left=FALSE, h12[c("HUC_12")]) #%>% 
-# select(ID, HUC_12) %>% as_tibble() %>% select(-geometry)
-# class(bmi_h12)
-# class(algae_h12)
-head(algae_h12)
-head(bmi_h12)
-# names(bmi_h12)
-# names(algae_h12)
-
-#  change to dataframe
-# bmi_h12 <- as.data.frame(bmi_h12)
-# select not working
-# Error in (function (classes, fdef, mtable)  : 
-# unable to find an inherited method for function ‘select’ for signature ‘"sf"’
-
-# now join based on H12: how many are in same?
-# sel_algae_bmi <- inner_join(algae_h12, bmi_h12, by="HUC_12") %>% distinct(StationID, .keep_all = T)
-sel_algae_bmi <- st_join(algae_h12, bmi_h12, by="HUC_12", left=F) #%>% distinct(StationCode, .keep_all = T)
-
-# ?st_join
-dim(sel_algae_bmi) # 736
-
-
-# number of unique h12s?
-length(unique(factor(sel_algae_bmi$HUC_12.x))) # 390 unique h12
-length(unique(sel_algae_bmi$StationCode)) # 527 unique bmi
-length(unique(sel_algae_bmi$StationID)) #  527 unique algae sites
-# so 527 possible algae sites, 527 bmi sites, in 390 HUC12's ??????? check this!! 
-
-# how many bmi? 512
-sel_bmi_algae <- bmi_sites %>% filter(StationCode %in% sel_algae_bmi$StationID)
-dim(sel_bmi_algae)
-
-
-# select H12s that have points inside:
-sel_h12_algae <- h12[sel_algae_bmi, ]
-dim(sel_h12_algae) # 390
-# although coordinates are longitude/latitude, st_intersects assumes that they are planar
-save(sel_h12_algae, file="output_data/02b_selected_h12_contain_algae_bmi.rda")
-
-# count sites that don't match per algae data then per bmi data
-sel_algae_bmi <- st_join(algae_h12, bmi_h12, by="HUC_12") #%>% distinct(StationCode, .keep_all = T)
-sel_bmi_algae <- st_join(bmi_h12, algae_h12,by="HUC_12") #%>% distinct(StationID, .keep_all = T)
-
-# ?st_join
-dim(sel_algae_bmi) # 2214 - all algae sites, only matched bmi sites - StationCode for only matched sites
-head(sel_algae_bmi)
-dim(sel_bmi_algae) # 3144
-head(sel_bmi_algae) # all bmi sites, only matched algae sites - StationID for only matched sites
-
-# number of unique h12s?
-length(unique(factor(sel_algae_bmi$HUC_12.x))) # 757 unique h12
-length(unique(sel_algae_bmi$StationCode)) # 530 unique bmi
-length(unique(sel_algae_bmi$StationID)) #  1690 unique algae sites
-
-
-# number of unique h12s?
-length(unique(factor(sel_bmi_algae$HUC_12.x))) # 1082 unique h12
-length(unique(sel_bmi_algae$StationCode)) # 2935 unique bmi
-length(unique(sel_bmi_algae$StationID)) #  530 unique algae sites
-
-#  subset the sites that match - to check
-#  by bmi
-match_by_bmi <- unique(sel_algae_bmi$StationCode)
-match_by_bmi # 530
-bmi_u <- sel_algae_bmi$StationID %in% match_by_bmi
-
-match_algae_bmi <- sel_algae_bmi[bmi_u,]
-unique(match_algae_bmi$StationCode) #$StationID# 517 matches, 
-
-#  by algae
-match_by_algae <- unique(sel_bmi_algae$StationID)
-match_by_algae # 530
-
-alg_u <- sel_bmi_algae$StationCode %in% match_by_algae
-
-match_bmi_algae <- sel_bmi_algae[alg_u,]
-unique(match_bmi_algae$StationCode) ## 514 matched sites
-
-#  some matched sites missing this 
-
-#  create dataset of unmatched sites - to look at location
-
-#  all sites df 
-# all_bio_sites <- merge(sel_bmi_algae, sel_algae_bmi, by.x="StationCode", by.y="StationID", all=T)
-all_bio_sites <- st_join(sel_algae_bmi, sel_bmi_algae, by="HUC_12")
-head(all_bio_sites)
-dim(all_bio_sites) # 3034
-sel_h12_bio <- h12[all_bio_sites, ]
-dim(sel_h12_bio) # 757
-
-# set background basemaps:
-basemapsList <- c("Esri.WorldTopoMap", "Esri.WorldImagery","Esri.NatGeoWorldMap",
-                  "OpenTopoMap", "OpenStreetMap", 
-                  "CartoDB.Positron", "Stamen.TopOSMFeatures")
-
-mapviewOptions(basemaps=basemapsList)
-
-m1 <- mapview(sel_algae_bmi, col.regions="orange", layer.name="Algae", alpha=0.5, cex=9) +
-  mapview(sel_bmi_algae, col.regions="blue", layer.name="BMI", cex=4) + 
-  mapview(sel_h12_bio, layer="H12", color="dodgerblue", col.regions="cyan", alpha=0.8, lwd=1)
-
-# add measure option  
-m1@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
-
+# #### # Intersect algae/bmi by H12 ----------------------------------------------
+# 
+# head(algae)
+# head(bmi_sites)
+# dim(bmi_sites)
+# # how many 
+# # Add H12 to points to algae and bmi (adds ATTRIBUTES, retains ALL pts if left=TRUE)
+# algae_h12 <- st_join(algae, left = FALSE, h12[c("HUC_12","h12_area_sqkm")]) #
+# # although coordinates are longitude/latitude, st_intersects assumes that they are planar
+# 
+# bmi_h12 <- st_join(bmi_sites, left=FALSE, h12[c("HUC_12")]) #%>% 
+# # select(ID, HUC_12) %>% as_tibble() %>% select(-geometry)
+# # class(bmi_h12)
+# # class(algae_h12)
+# head(algae_h12)
+# head(bmi_h12)
+# # names(bmi_h12)
+# # names(algae_h12)
+# 
+# #  change to dataframe
+# # bmi_h12 <- as.data.frame(bmi_h12)
+# # select not working
+# # Error in (function (classes, fdef, mtable)  : 
+# # unable to find an inherited method for function ‘select’ for signature ‘"sf"’
+# 
+# # now join based on H12: how many are in same?
+# # sel_algae_bmi <- inner_join(algae_h12, bmi_h12, by="HUC_12") %>% distinct(StationID, .keep_all = T)
+# sel_algae_bmi <- st_join(algae_h12, bmi_h12, by="HUC_12", left=F) #%>% distinct(StationCode, .keep_all = T)
+# 
+# # ?st_join
+# dim(sel_algae_bmi) # 736
+# 
+# 
+# # number of unique h12s?
+# length(unique(factor(sel_algae_bmi$HUC_12.x))) # 390 unique h12
+# length(unique(sel_algae_bmi$StationCode)) # 527 unique bmi
+# length(unique(sel_algae_bmi$StationID)) #  527 unique algae sites
+# # so 527 possible algae sites, 527 bmi sites, in 390 HUC12's ??????? check this!! 
+# 
+# # how many bmi? 512
+# sel_bmi_algae <- bmi_sites %>% filter(StationCode %in% sel_algae_bmi$StationID)
+# dim(sel_bmi_algae)
+# 
+# 
+# # select H12s that have points inside:
+# sel_h12_algae <- h12[sel_algae_bmi, ]
+# dim(sel_h12_algae) # 390
+# # although coordinates are longitude/latitude, st_intersects assumes that they are planar
+# save(sel_h12_algae, file="output_data/02b_selected_h12_contain_algae_bmi.rda")
+# 
+# # count sites that don't match per algae data then per bmi data
+# sel_algae_bmi <- st_join(algae_h12, bmi_h12, by="HUC_12") #%>% distinct(StationCode, .keep_all = T)
+# sel_bmi_algae <- st_join(bmi_h12, algae_h12,by="HUC_12") #%>% distinct(StationID, .keep_all = T)
+# 
+# # ?st_join
+# dim(sel_algae_bmi) # 2214 - all algae sites, only matched bmi sites - StationCode for only matched sites
+# head(sel_algae_bmi)
+# dim(sel_bmi_algae) # 3144
+# head(sel_bmi_algae) # all bmi sites, only matched algae sites - StationID for only matched sites
+# 
+# # number of unique h12s?
+# length(unique(factor(sel_algae_bmi$HUC_12.x))) # 757 unique h12
+# length(unique(sel_algae_bmi$StationCode)) # 530 unique bmi
+# length(unique(sel_algae_bmi$StationID)) #  1690 unique algae sites
+# 
+# 
+# # number of unique h12s?
+# length(unique(factor(sel_bmi_algae$HUC_12.x))) # 1082 unique h12
+# length(unique(sel_bmi_algae$StationCode)) # 2935 unique bmi
+# length(unique(sel_bmi_algae$StationID)) #  530 unique algae sites
+# 
+# #  subset the sites that match - to check
+# #  by bmi
+# match_by_bmi <- unique(sel_algae_bmi$StationCode)
+# match_by_bmi # 530
+# bmi_u <- sel_algae_bmi$StationID %in% match_by_bmi
+# 
+# match_algae_bmi <- sel_algae_bmi[bmi_u,]
+# unique(match_algae_bmi$StationCode) #$StationID# 517 matches, 
+# 
+# #  by algae
+# match_by_algae <- unique(sel_bmi_algae$StationID)
+# match_by_algae # 530
+# 
+# alg_u <- sel_bmi_algae$StationCode %in% match_by_algae
+# 
+# match_bmi_algae <- sel_bmi_algae[alg_u,]
+# unique(match_bmi_algae$StationCode) ## 514 matched sites
+# 
+# #  some matched sites missing this 
+# 
+# #  create dataset of unmatched sites - to look at location
+# 
+# #  all sites df 
+# # all_bio_sites <- merge(sel_bmi_algae, sel_algae_bmi, by.x="StationCode", by.y="StationID", all=T)
+# all_bio_sites <- st_join(sel_algae_bmi, sel_bmi_algae, by="HUC_12")
+# head(all_bio_sites)
+# dim(all_bio_sites) # 3034
+# sel_h12_bio <- h12[all_bio_sites, ]
+# dim(sel_h12_bio) # 757
+# 
+# # set background basemaps:
+# basemapsList <- c("Esri.WorldTopoMap", "Esri.WorldImagery","Esri.NatGeoWorldMap",
+#                   "OpenTopoMap", "OpenStreetMap", 
+#                   "CartoDB.Positron", "Stamen.TopOSMFeatures")
+# 
+# mapviewOptions(basemaps=basemapsList)
+# 
+# m1 <- mapview(sel_algae_bmi, col.regions="orange", layer.name="Algae", alpha=0.5, cex=9) +
+#   mapview(sel_bmi_algae, col.regions="blue", layer.name="BMI", cex=4) + 
+#   mapview(sel_h12_bio, layer="H12", color="dodgerblue", col.regions="cyan", alpha=0.8, lwd=1)
+# 
+# # add measure option  
+# m1@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
+# 
 
 # Get algae COMIDs ----------------------------------------------------------
 #  COMIDS for algae??
@@ -330,18 +330,18 @@ m1@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
 # Mapview -----------------------------------------------------------------
 
 # set background basemaps:
-basemapsList <- c("Esri.WorldTopoMap", "Esri.WorldImagery","Esri.NatGeoWorldMap",
-                  "OpenTopoMap", "OpenStreetMap", 
-                  "CartoDB.Positron", "Stamen.TopOSMFeatures")
-
-mapviewOptions(basemaps=basemapsList)
-
-m1 <- mapview(sel_algae_bmi, col.regions="orange", layer.name="Algae", alpha=0.5, cex=9) +
-  mapview(sel_bmi_algae, col.regions="blue", layer.name="BMI", cex=4) + 
-  mapview(sel_h12_algae, layer="H12", color="dodgerblue", col.regions="cyan", alpha=0.8, lwd=1)
-
-# add measure option  
-m1@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
+# basemapsList <- c("Esri.WorldTopoMap", "Esri.WorldImagery","Esri.NatGeoWorldMap",
+#                   "OpenTopoMap", "OpenStreetMap", 
+#                   "CartoDB.Positron", "Stamen.TopOSMFeatures")
+# 
+# mapviewOptions(basemaps=basemapsList)
+# 
+# m1 <- mapview(sel_algae_bmi, col.regions="orange", layer.name="Algae", alpha=0.5, cex=9) +
+#   mapview(sel_bmi_algae, col.regions="blue", layer.name="BMI", cex=4) + 
+#   mapview(sel_h12_algae, layer="H12", color="dodgerblue", col.regions="cyan", alpha=0.8, lwd=1)
+# 
+# # add measure option  
+# m1@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
 #  shows only bmi/algae sites that match - would be good to see sites that don't match and where
 
 
@@ -442,7 +442,7 @@ save(gage_algae_comid, file="output_data/02b_siteid_stationid_comid.RData")
 
 usgs_segs <- sel_gages_algae %>% split(.$site_id) %>%
   map(~discover_nhdplus_id(.x$geometry))
-usgs_segs
+length(usgs_segs)
 # search by a single comid
 # nldi_feature <- list(featureSource = "comid",
 #                      featureID = sel_gages_sf$NHDV1_COMID[[1]])
@@ -517,3 +517,4 @@ mapview(mainstems_ds, color="slateblue", legend=F) +
   mapview(sel_algae_gages, col.regions="orange", layer.name="Algae", cex=6)
 
 ## all present, includes gauges/algae sites not on the main stems
+## does it have sites less than 10km? remove sites not on mainstem

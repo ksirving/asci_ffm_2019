@@ -1,4 +1,4 @@
-# 04 Generate Final Selected Sites/Data
+# 03 Generate Final Selected Sites/Data
 ## R. Peek/Katie Irving
 ## Look at final output
 
@@ -35,27 +35,35 @@ mapviewOptions(basemaps=basemapsList)
 # Get algae comids ----------------------------------------------------------
 #  merge algae comids and gages
 head(algae_segs_df)
+dim(algae_segs_df) ## 602
 head(sel_algae_gages)
 dim(algae_segs_df)
 unique(sel_algae_gages$site_id) # 226
-
+head(mainstems_us)
 
 algae_com_gage <- merge(algae_segs_df, sel_algae_gages, by="StationID")
 head(algae_com_gage) 
 dim(algae_com_gage) # 778
+length(unique(algae_com_gage$comid)) ## 502
 algae_com_gage <- algae_com_gage %>% 
-  st_as_sf(coords=c("Latitude", "Longitude"), crs=4269, remove=F) # define coords to make spatial
+st_as_sf(coords=c("Latitude", "Longitude"), crs=4269, remove=F)# define coords to make spatial
+algae_com_gage <- st_transform(algae_com_gage, crs=3310)
+
+sum(mainstems_us$nhdplus_comid %in% mainstems_ds$nhdplus_comid) ## 3991 match - same comids us and ds?
 
 save(algae_com_gage, file="output_data/03_paired_gages_algae_comid.RData" ) # gages us and ds mets
+
 # all stations us of gage:
 algae_us_coms <- algae_com_gage %>% filter(comid %in% mainstems_us$nhdplus_comid)
-
-# all stations 15km downstream on mainstem
+mainstems_us$nhdplus_comid
+# all stations 10km downstream on mainstem
 algae_ds_coms <- algae_com_gage %>% filter(comid %in% mainstems_ds$nhdplus_comid)
-
+mainstems_ds$nhdplus_comid
+dim(algae_us_coms)
+dim(algae_ds_coms)
 # bmi_us_coms %>% st_drop_geometry() %>% inner_join(., bmi_ds_coms, by="StationCode") %>% tally()
 
-# Make Map of Selected Gages and BMI Stations --------------------------
+# Make Map of Selected Gages and algae Stations --------------------------
 
 # this map of all sites selected U/S and D/S
 m3 <- mapview(algae_ds_coms, cex=6, col.regions="orange", layer.name="Selected Algae D/S") +  
@@ -68,6 +76,7 @@ m3 <- mapview(algae_ds_coms, cex=6, col.regions="orange", layer.name="Selected A
 
 m3@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
 
+## has upstream (yellow) but not downstream?
 # Make Map of Selected Stations by Site Status  --------------------------
 
 # # first add site status - do not have site status for algae!
@@ -87,13 +96,15 @@ m3@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
 
 
 # Combine algae US and DS ---------------------------------------------------
-
+dim(algae_ds_coms)
+dim(algae_us_coms)
 # combine:
 algae_coms <- do.call(what = sf:::rbind.sf,
                     args = list(algae_ds_coms, algae_us_coms))
 # class(algae_coms)
 head(algae_coms)
-dim(algae_coms) #120
+dim(algae_coms) #1309
+length(unique(algae_coms$comid)) #421
 # head(algae)
 # sum(is.na(algae))
 #library(DT)
