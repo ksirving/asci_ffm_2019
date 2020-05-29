@@ -12,34 +12,50 @@ library(raster)
 setwd("/Users/katieirving/Documents/git/asci_ffm_2019")
 
 # data needed
-load(file="output_data/01_clean_algae.RData") # algae - asci data spatial
-load(file="input_data/01_usgs_all_gages.rda") # all gages & ffc data
+load(file="output_data/01_clean_algae.RData") # algae
+load(file="input_data/01_usgs_all_gages.rda") # all gages 
 load(file="input_data/huc12_sf.rda") # h12 - huc 12 data
 # load(file="input_data/00_usgs_ca_all_daily_flow_gages.rda") # ca_usgs_gages  all gauges CA
 
 str(usgs_final_all)
 names(algae)
-## make spatial
 
-algae <- algae %>% 
-  st_as_sf(coords=c("Longitude", "Latitude"), crs=4326, remove=F)
+#  coords into numeric
+algae$Latitude <- as.numeric(as.character(algae$Latitude))
+algae$Longitude <- as.numeric(as.character(algae$Longitude))
+
+#  remove NAs
+# sum(is.na(algae)) # 50 x NAs but not registering until formatted to a number, remaining are nas fro some variables
+# #  where are the NAs? 
+# na_ind <- which(is.na(algae)) 
+# na_ind
+
+algae <- na.omit(algae)
 
 ## make df with just sites and coords for slage sites
 
-
-algae_stations_distinct <- algae[, c(2,4:5,14)]
+algae_stations_distinct <- algae[, c(2,4:5)]
 algae_stations_distinct<- algae_stations_distinct[!duplicated(algae_stations_distinct$StationID), ]
-dim(algae_stations_distinct) ## 1696
+dim(algae_stations_distinct) ## 1688
+head(algae_stations_distinct)
 
+## make spatial
+algae <- algae %>% 
+  st_as_sf(coords=c("Longitude", "Latitude"), crs=4326, remove=F)
 
+algae_stations_distinct <- algae_stations_distinct %>% 
+  st_as_sf(coords=c("Longitude", "Latitude"), crs=4326, remove=F)
 
 gages <- usgs_final_all %>% st_transform(4326)
 rm(usgs_final_all)
+
+head(algae)
 
 # check projs are same
 st_crs(algae)
 st_crs(gages)
 st_crs(h12)
+st_crs(algae_stations_distinct)
 
 
 
@@ -52,6 +68,9 @@ table(gages_all_filt$CEFF_type) ## ALT = 334 REF = 122
 
 # Add H12 to points to algae and Gages (adds ATTRIBUTES, retains ALL pts if left=TRUE), using algae
 algae_h12 <- st_join(algae_stations_distinct, left = TRUE, h12[c("HUC_12")])
+head(algae_h12)
+head(h12)
+
 
 # Add H12 to all gages
 gages_h12 <- st_join(gages_all_filt, left=TRUE, h12[c("HUC_12")]) %>%
@@ -195,7 +214,7 @@ sel_algae_gages_asci <- left_join(sel_algae_gages, st_drop_geometry(algae_statio
   ### ADD ADDITIONAL SITES?
   # T11206500, T11208000, T11152050
   
-  gages_to_add <- sel_gages_bmi %>% filter(ID %in% c("T11206500", "T11208000", "T11152050", "T11153650"))
+  gages_to_add <- sel_gages_algae %>% filter(ID %in% c("T11206500", "T11208000", "T11152050", "T11153650"))
   
   # double check?
   missing_segs <- gages_to_add %>% split(.$ID) %>%
@@ -235,7 +254,7 @@ sel_algae_gages_asci <- left_join(sel_algae_gages, st_drop_geometry(algae_statio
   
   # make a single flat layer
   mainstems_flat_ds <- mainstemsDS %>%
-    set_names(., sel_gages_bmi$gage_id) %>%
+    set_names(., sel_gages_algae$gage_id) %>%
     map2(sel_gages_bmi$gage_id, ~mutate(.x, gageID=.y))
   
   # bind together
