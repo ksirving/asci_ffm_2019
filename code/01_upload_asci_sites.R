@@ -203,3 +203,7 @@ algae <- na.omit(algae)
 algae <- algae[, -c(3:5)] # may change with rep decision
 head(algae)
 save(algae, file="output_data/01_clean_algae.RData") 
+
+## get COMIDs
+
+
