@@ -118,6 +118,14 @@ sel_algae_gages_asci <- left_join(sel_algae_gages, st_drop_geometry(algae_statio
   gages_not_selected <- gages_all_filt %>% 
     filter(!ID %in% sel_gages_algae$ID)
   
+  save(gages_not_selected, file="output_data/02_gages_not_selected.RData")
+  
+  # get the gages  selected
+  gages_selected <- gages_all_filt %>% 
+    filter(ID %in% sel_gages_algae$ID)
+  
+  save(gages_selected, file="output_data/02_gages_selected.RData")
+  
   table(sel_gages_algae$CEFF_type) # ALT=137  REF=52
   table(gages_not_selected$CEFF_type) # ALT=188  REF=70
 
@@ -126,6 +134,8 @@ sel_algae_gages_asci <- left_join(sel_algae_gages, st_drop_geometry(algae_statio
     # filter(!is.na(asci)) %>% 
     filter(!StationID %in% sel_algae_gages$StationID) %>% 
     distinct(StationID, .keep_all=TRUE)
+  
+  save(algae_not_selected, file="output_data/02_algae_sites_not_selected.RData")
   
   # this map of all sites selected U/S and D/S
   m1 <- mapview(sel_algae_gages, cex=6, col.regions="orange", 
