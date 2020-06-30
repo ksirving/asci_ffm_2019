@@ -34,7 +34,7 @@ algae <- na.omit(algae)
 
 ## make df with just sites and coords for slage sites
 
-algae_stations_distinct <- algae[, c(2,4:5)]
+algae_stations_distinct <- algae
 algae_stations_distinct<- algae_stations_distinct[!duplicated(algae_stations_distinct$StationID), ]
 dim(algae_stations_distinct) ## 1688
 head(algae_stations_distinct)
@@ -96,7 +96,7 @@ sel_algae_gages_asci <- left_join(sel_algae_gages, st_drop_geometry(algae_statio
   sel_gages_algae <- gages_all_filt %>% 
   filter(ID %in% sel_algae_gages$ID) %>% 
   distinct(ID, .keep_all = T)
-
+names(sel_algae_gages)
 # length(unique(sel_gages_algae$ID))
   
 # select H12s that have points inside: # n=163
@@ -357,6 +357,7 @@ sel_algae_gages_asci <- left_join(sel_algae_gages, st_drop_geometry(algae_statio
   # bind together
   mainstems_ds <- sf::st_as_sf(data.table::rbindlist(mainstems_flat_ds, use.names = TRUE, fill = TRUE))
   
+  
   # add direction to gage col
   mainstems_ds <- mainstems_ds %>% 
     mutate(from_gage = "DS")
@@ -381,20 +382,20 @@ sel_algae_gages_asci <- left_join(sel_algae_gages, st_drop_geometry(algae_statio
   sel_gages_algae <- readRDS("output_data/02_selected_usgs_h12_all_gages.rds")
   sel_h12_algae <- readRDS("output_data/02_selected_h12_all_gages.rds")
   load("output_data/02_selected_nhd_mainstems_gages.rda")
-  names(sel_algae_gages)
+  names(sel_algae_gages_asci)
   # get distinct segs only
   mainstems_distinct <- mainstems_all %>% distinct(nhdplus_comid, .keep_all=TRUE)
   # head(sel_algae_gages_asci)
   # all algae comids that occur in list of mainstem NHD comids: (n=353)
   sel_algae_coms_final <- sel_algae_gages %>% 
-    filter(comid.x %in% as.integer(mainstems_distinct$nhdplus_comid))
+    filter(comid %in% as.integer(mainstems_distinct$nhdplus_comid))
   
   # distinct comid/station/gages combinations:
   sel_algae_coms_final %>% st_drop_geometry() %>% 
-    distinct(StationID, ID) %>% tally() # n=532
+    distinct(StationID, ID) %>% tally() # n=331
   
   # distinct algae COMIDs
-  sel_algae_coms_final %>% st_drop_geometry() %>% distinct(comid.x) %>% tally() # 217
+  sel_algae_coms_final %>% st_drop_geometry() %>% distinct(comid) %>% tally() # 217
   
   # distinct GAGES COMIDS
   sel_algae_coms_final %>% st_drop_geometry() %>% distinct(ID) %>% tally() # 155
@@ -404,9 +405,9 @@ sel_algae_gages_asci <- left_join(sel_algae_gages, st_drop_geometry(algae_statio
   # create a final map of selected gages and algae + huc12 + flowlines
   
   # get all algae not selected...check why not on map
-  algae_not_selected <- sel_algae_gages %>% filter(!as.character(comid.x) %in% mainstems_distinct$nhdplus_comid) # should be 199 (loss of 64% of data)
+  algae_not_selected <- sel_algae_gages %>% filter(!as.character(comid) %in% mainstems_distinct$nhdplus_comid) # should be 199 (loss of 64% of data)
   dim(algae_not_selected)
-  # get all gages selected (n=156)
+  # get all gages selected (n=201)
   gages_selected <- sel_gages_algae %>% 
     filter(gage_id %in% sel_algae_coms_final$gage_id)
   dim(gages_selected) ## 155 - ALL COMIDs SELECTED - WHY?
@@ -424,11 +425,11 @@ sel_algae_gages_asci <- left_join(sel_algae_gages, st_drop_geometry(algae_statio
     mapview(gages_selected, col.regions="skyblue", cex=7, color="blue2",
             layer.name="Selected USGS Gages") + 
     # these are all algae or gages in same H12 but not selected
-    # mapview(gages_not_selected, col.regions="slateblue", color="gray20",
-    #         cex=3.2, layer.name="Other USGS Gages") + 
-    # mapview(algae_not_selected, col.regions="gold", color="gray20", cex=3.2, 
-    #         layer.name="Other Algae Sites in H12") + 
-    mapview(sel_h12_algae, col.regions="dodgerblue", alpha.region=0.1, 
+    mapview(gages_not_selected, col.regions="slateblue", color="gray20",
+            cex=3.2, layer.name="Other USGS Gages") +
+    mapview(algae_not_selected, col.regions="gold", color="gray20", cex=3.2,
+            layer.name="Other Algae Sites in H12") +
+    mapview(sel_h12_algae, col.regions="dodgerblue", alpha.region=0.1,
             color="darkblue", legend=F, layer.name="HUC12")
   
   m2@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
@@ -522,34 +523,42 @@ sel_algae_gages_asci <- left_join(sel_algae_gages, st_drop_geometry(algae_statio
   # load the full dataset from 00
   
   str(algae)
-  algae <- as_tibble(algae) ## CONTINUE HERE - ERROR WITH SELECT!
+  algae <- as_tibble(algae) 
   # pull algae sites and get list of data, first join with orig full dataset:
-  algae_coms_dat <- left_join(sel_algae_coms_final, algae %>% select(StationID, SampleID, MM:problemFinalID), by=c("StationID", "SampleID")) 
+  names(algae)
   
-  # now look at how many unique samples are avail: n=270 unique samples
-  algae_coms_dat %>% st_drop_geometry() %>% distinct(SampleID) %>% tally
+  algae <- separate(algae, col = sampledate , into=c("YY", "MM", "DD"), remove = F)
+
+  algae_coms_dat <- left_join(sel_algae_coms_final, algae , by=c("StationID")) 
+  names(algae_coms_dat)
+  # now look at how many unique samples are avail: n=426 unique samples
+  algae_coms_dat %>% st_drop_geometry() %>% distinct(SampleID_old.x) %>% tally
   
-  # now look at how many unique stations: n=270 stations
-  algae_coms_dat %>% st_drop_geometry() %>% distinct(StationCode) %>% tally
+  # now look at how many unique stations: n=268 stations
+  algae_coms_dat %>% st_drop_geometry() %>% distinct(StationID) %>% tally
   
-  # now look at how many unique gageID: n=160 stations (ALT=116, REF=44)
+  # now look at how many unique gageID: n=160 stations (ALT=109, REF=46)
   algae_coms_dat %>% st_drop_geometry() %>% distinct(ID, .keep_all=TRUE) %>% count(CEFF_type)
+  names(algae_coms_dat)
+  
+  
   
   # summary
   summary(algae_coms_dat)
-  hist(algae_coms_dat$MM) # what months?
-  # if trim to summer months how many records do we lose? (15% of data)
+  algae_coms_dat$MM <- as.numeric(as.character(algae_coms_dat$MM))
+  hist(as.numeric(as.character(algae_coms_dat$MM))) # what months?
+  # if trim to summer months how many records do we lose? 
   algae_coms_dat_trim <- algae_coms_dat %>% filter(MM>4 & MM<10) 
   hist(algae_coms_dat_trim$MM)
   
-  # if trimming we lose a few gages: ALT=100, REF=42
+  # if trimming we lose a few gages: ALT=106, REF=45 - but not many!!!
   algae_coms_dat_trim %>% st_drop_geometry() %>% distinct(ID, .keep_all=TRUE) %>% count(CEFF_type)
   
   
   # save out
-  save(algae_coms_dat, algae_coms_dat_trim, sel_algae_coms_final_v2, file = "data_output/03_selected_final_algae_stations_dat_all_gages.rda")
+  save(algae_coms_dat, algae_coms_dat_trim, sel_algae_coms_final, file = "output_data/03_selected_final_algae_stations_dat_all_gages.rda")
   
-  
+  ## continue here if needed!
   # Z-ARCHIVE: Measuring Nearest and Line Lengths --------------------------------------
   
   # this is mostly experimental code snapping points to lines and updating/measuring distances
