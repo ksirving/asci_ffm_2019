@@ -86,23 +86,29 @@ gbm_fin_RI <- gbm_fin_RI %>%
   rename(RI = rel.inf)
 
 ## Now Plot ALL
-(fin_ri <- gbm_fin_RI %>% 
+quartz
+plotname
+dev.off()
+head(fin_ri)
+fin_ri <- gbm_fin_RI %>% 
     arrange(desc(RI)) %>% 
     #filter(RI > 3) %>% #View()
-    filter(flow_component!="General") %>% 
-    ggplot(.) +
+    filter(flow_component!="General") # %>% 
+    
+ggplot(data=fin_ri) +
     geom_col(aes(x=var,
                  y=RI, fill=flow_component), color="gray20", lwd=.1,
              position="dodge") +
-    coord_flip()+
-    geom_hline(yintercept = 5, color="gray40", lwd=1, lty=2, alpha=0.8)+
-    ylim(c(0,30))+
-    scale_fill_viridis_d("Flow Component")+
-    labs(title = plotname,
-         #title=paste0(hydroDat, " (", toupper(as_label(algaeVar)),") Metrics: ", modname),
-         #subtitle="MSE Criterion",
-         x="", y="Relative Influence (%)") +
-    theme_classic(base_family = "Roboto Condensed"))
+    coord_flip() +
+    geom_hline(yintercept = 5, color="gray40", lwd=1, lty=2, alpha=0.8) +
+    ylim(c(0,30)) +
+    # # theme(text=element_text(family="Garamond", size=14))+
+    scale_fill_viridis_d("Flow Component") #+
+    # labs(title = plotname,
+    #      title=paste0(hydroDat, " (", toupper(as_label(algaeVar)),") Metrics: ", modname),
+    #      subtitle="MSE Criterion",
+    #      x="", y="Relative Influence (%)") #+
+    # theme_classic(base_family = "Roboto Condensed")
 
 # # save out
 ggsave(filename=tolower(paste0("models/", mod_savename, "_all_RI_mse.png")), width = 9, height = 7, units = "in", dpi = 300)
@@ -110,20 +116,21 @@ ggsave(filename=tolower(paste0("models/", mod_savename, "_all_RI_mse.png")), wid
 # 01B. RELATIVE INFLUENCE PLOTS (MSE) TOP VARS -------------------------------------
 
 # and plot top vars only
-(fin_ri_top <- gbm_fin_RI %>% 
+fin_ri_top <- gbm_fin_RI %>% 
    arrange(desc(RI)) %>% 
-   filter(flow_component!="General", RI>5) %>% 
-   ggplot(.) +
+   filter(flow_component!="General", RI>5) #%>% 
+   
+ggplot(fin_ri_top) +
    geom_col(aes(x=reorder(var, RI),
                 y=RI, fill=flow_component), color="gray20", lwd=.1,
             position="dodge") +
    coord_flip() +
    geom_hline(yintercept = 5, color="gray40", lwd=1, lty=2, alpha=0.8)+
    ylim(c(0,30))+
-   scale_fill_viridis_d("Flow Component")+
-   labs(title=paste0(hydroDat, " (", toupper(as_label(algaeVar)),") Top Metrics: ", modname),
-        x="", y="Relative Influence (%)", subtitle="MSE Criterion") +
-   theme_classic(base_family = "Roboto Condensed")) 
+   scale_fill_viridis_d("Flow Component")
+   # labs(title=paste0(hydroDat, " (", toupper(as_label(algaeVar)),") Top Metrics: ", modname),
+   #      x="", y="Relative Influence (%)", subtitle="MSE Criterion") +
+   # theme_classic(base_family = "Roboto Condensed")) 
 
 # save out
 ggsave(filename=tolower(paste0("models/", mod_savename, "_top_RI_mse.png")), width = 9, height = 7, units = "in", dpi = 300)
@@ -162,11 +169,11 @@ gbm_fin_PT <- gbm_fin_PT %>%
     coord_flip() +
     geom_hline(yintercept = 5, color="gray40", lwd=1, lty=2, alpha=0.8)+
     ylim(c(0,50))+
-    scale_fill_viridis_d("Flow Component")+
-    labs(title=paste0(hydroDat, " (", toupper(as_label(algaeVar)),") Metrics: ", modname),
-         y="Relative Influence (%) (perm test)", x="",
-         subtitle = "Permutation Test") +
-    theme_classic(base_family = "Roboto Condensed")) 
+    scale_fill_viridis_d("Flow Component"))
+    # labs(title=paste0(hydroDat, " (", toupper(as_label(algaeVar)),") Metrics: ", modname),
+    #      y="Relative Influence (%) (perm test)", x="",
+    #      subtitle = "Permutation Test") +
+    # theme_classic(base_family = "Roboto Condensed")) 
 
 # save out
 ggsave(filename=tolower(paste0("models/", mod_savename, "_all_RI_permtest.png")), width = 9, height = 7, units = "in", dpi = 300)
@@ -185,11 +192,11 @@ ggsave(filename=tolower(paste0("models/", mod_savename, "_all_RI_permtest.png"))
    coord_flip() +
    geom_hline(yintercept = 5, color="gray40", lwd=1, lty=2, alpha=0.8)+
    ylim(c(0,50))+
-   scale_fill_viridis_d("Flow Component")+
-   labs(title=paste0(hydroDat, " (", toupper(as_label(algaeVar)),") Top Metrics: ", modname),
-        y="Relative Influence (%) (perm test)", x="",
-        subtitle = "Permutation Test") +
-   theme_classic(base_family = "Roboto Condensed")) 
+   scale_fill_viridis_d("Flow Component"))
+   # labs(title=paste0(hydroDat, " (", toupper(as_label(algaeVar)),") Top Metrics: ", modname),
+   #      y="Relative Influence (%) (perm test)", x="",
+   #      subtitle = "Permutation Test") +
+   # theme_classic(base_family = "Roboto Condensed")) 
 
 # save out
 ggsave(filename=tolower(paste0("models/", mod_savename, "_top_RI_permtest.png")), width = 9, height = 7, units = "in", dpi = 300)
@@ -251,10 +258,10 @@ varNo <- 3 # single number makes single plot
       grid.resolution = 100,
       ice = TRUE
     ) %>%
-    autoplot(rug = TRUE, train = gbm_out_train, alpha = .1, center = TRUE) +
-    labs(subtitle = paste0("ICE Centered (RI): ", bestHydro_ri$var[varNo], " for ", hydroDat),
-         y=paste0("Predicted ", as_name(algaeVar))) +
-    ggdark::dark_theme_classic(base_family = "Roboto Condensed"))
+    autoplot(rug = TRUE, train = gbm_out_train, alpha = .1, center = TRUE))# +
+    # labs(subtitle = paste0("ICE Centered (RI): ", bestHydro_ri$var[varNo], " for ", hydroDat),
+    #      y=paste0("Predicted ", as_name(algaeVar))) +
+    # ggdark::dark_theme_classic(base_family = "Roboto Condensed"))
 
 # RI save:
 ggsave(filename=paste0("models/", mod_savename, "_pdp_ice_",

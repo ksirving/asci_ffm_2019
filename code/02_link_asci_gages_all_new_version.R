@@ -206,10 +206,10 @@ names(sel_algae_gages)
   
   # load previous stuff run from Step 05 algae COMIDS
   algae_comids <- read_rds("output_data/02_algae_all_stations_comids.rds")
-  head(algae_comids)
-  dim(algae_comids) ## 1680
-  head(sel_algae_gages)
-  dim(sel_algae_gages)
+  # head(algae_comids)
+  # dim(algae_comids) ## 1680
+  # head(sel_algae_gages)
+  # dim(sel_algae_gages)
   # rejoin with the selected algae sites in same HUC12 as gage
   sel_algae_gages <- sel_algae_gages %>% left_join(., algae_comids, by="StationID") # n=2188
 
