@@ -23,17 +23,17 @@ set.seed(321) # reproducibility
 
 ## If already run Step 01a, comment out these next 3 lines and start at mainstem rivers, and skip 01a
 
-# trimmed (May-Sept) data, and sf layers w geoms for bmi and usgs
-# load("data_output/05_selected_bmi_csci_por_and_sf.rda")
+# trimmed (May-Sept) data, and sf layers w geoms for algae and usgs
+load("output_data/04_selected_algae_asci_por_sf.rda")
 
 # mainstem rivers
-load("data_output/03_selected_nhd_mainstems_gages.rda") # mainstems_all
+load("output_data/02_selected_nhd_mainstems_gages.rda") # mainstems_all
 
 # ca regions
-ca_sp_regions <- read_sf("data/spatial/umbrella_sp_regions.shp", as_tibble = T) %>% st_transform(4326)
+ca_sp_regions <- read_sf("input_data/spatial/umbrella_sp_regions.shp", as_tibble = T) %>% st_transform(4326)
 
 # load updated data w HUC_regions:
-load("data_output/07_selected_bmi_csci_por_trim_w_huc_region.rda")
+load("output_data/04_selected_algae_asci_por_trim_w_huc_region.rda")
 
 # set background basemaps/default options:
 basemapsList <- c("Esri.WorldTopoMap", "Esri.WorldImagery","Esri.NatGeoWorldMap",
@@ -43,110 +43,121 @@ mapviewOptions(homebutton = FALSE, basemaps=basemapsList, viewer.suppress = FALS
 
 # 01a. Add Regions --------------------------------------------------
 
-# check crs:
-# st_crs(bmi_csci_por_trim)
+# # check crs:
+# st_crs(algae_asci_por_trim)
 # st_crs(ca_sp_regions)
-
-# join with regions and add huc_region, make sure both df are in 4326
-# bmi_csci_por_trim <- st_join(bmi_csci_por_trim, left = TRUE, ca_sp_regions["huc_region"])
-
-# make a simpler layer for just editing:
-# bmi_csci_sites <- bmi_csci_por_trim %>% 
-#   dplyr::distinct(StationCode, ID, .keep_all = TRUE)
-# length(unique(bmi_csci_sites$StationCode))
-
-# view and update w mapedit
-# mapview(bmi_csci_sites, col.regions="orange") + mapview(ca_sp_regions)
-
+# 
+# # join with regions and add huc_region, make sure both df are in 4326
+# algae_asci_por_trim <- st_join(algae_asci_por_trim, left = TRUE, ca_sp_regions["huc_region"])
+# names(algae_asci_por_trim)
+# ?separate
+# ## format date column to match BMI 
+# # algae_asci_por_trim <- algae_asci_por_trim %>%
+# #   separate(sampledate, c("YYYY", "MM", "DD"), remove=F) 
+# 
+# # algae_asci_por_trim <- algae_asci_por_trim %>%
+# #   unite(YMD, YYYY, MM, DD, sep="-", remove=F)
+# 
+# # make a simpler layer for just editing:
+# algae_asci_sites <- algae_asci_por_trim %>%
+#   dplyr::distinct(StationID, ID, .keep_all = TRUE)
+# length(unique(algae_asci_sites$StationID)) # 254
+# 
+# # view and update w mapedit
+# mapview(algae_asci_sites, col.regions="orange") + mapview(ca_sp_regions)
+# # install.packages("mapedit")
+# # install.packages("httpuv")
 # library(mapedit)
 # library(leafpm)
 # library(leaflet)
-# 
-# # use this to select features (returns a list of stationcodes)
+# # 
+# # # use this to select features (returns a list of stationcodes)
 # selectMap(
 #   leaflet() %>%
 #     addTiles() %>%
 #     addPolygons(data=ca_sp_regions, layerId = ~huc_region, color = "orange") %>%
-#     addCircleMarkers(data = bmi_csci_sites, layerId = ~StationCode)
+#     addCircleMarkers(data = algae_asci_sites, layerId = ~StationID)
 #   )
-
-## sites to add to central valley
+# 
+# ## sites to add to central valley
 # cvalley_add <- c("514FC1278", "514RCR001", "534DCC167")
-
-## sites to add to great_basin
+# 
+# ## sites to add to great_basin
 # gbasin_add <- c("603MAM004", "630PS0005")
-
-## sites to add to southcoast
+# 
+# ## sites to add to southcoast
 # scoast_add <- c("628PS1307","628PS1179","719MISSCK","719TRMDSS","719FCA001")
-
-# Amargosa site is "609PS0053" = mojave?
-
-# so 294 NA's
-# summary(as.factor(bmi_csci_por_trim$huc_region))
-
-# use case_when to replace
-# bmi_csci_por_trim <- bmi_csci_por_trim %>% 
+# 
+# # Amargosa site is "609PS0053" = mojave?
+# 
+# 
+# summary(as.factor(algae_asci_por_trim$huc_region.x)) ## 224 NAs
+# 
+# # use case_when to replace
+# algae_asci_por_trim <- algae_asci_por_trim %>%
 #   mutate(huc_region = case_when(
-#     StationCode %in% cvalley_add ~ "central_valley",
-#     StationCode %in% gbasin_add ~ "great_basin",
-#     StationCode %in% scoast_add ~ "south_coast",
-#     TRUE ~ huc_region))
+#     StationID %in% cvalley_add ~ "central_valley",
+#     StationID %in% gbasin_add ~ "great_basin",
+#     StationID %in% scoast_add ~ "south_coast",
+#     TRUE ~ huc_region.x))
 # 
-# summary(as.factor(bmi_csci_por_trim$huc_region))
-# table(bmi_csci_por_trim$huc_region)
-# 
-# # map and double check:
-# mapview(bmi_csci_por_trim, zcol="huc_region", layer.name="Selected Sites", viewer.suppress=FALSE) +
+# summary(as.factor(algae_asci_por_trim$huc_region.x))
+# table(algae_asci_por_trim$huc_region.x)
+# # 
+# # # map and double check:
+# mapview(algae_asci_por_trim, zcol="huc_region", layer.name="Selected Sites", viewer.suppress=FALSE) +
 #   mapview(ca_sp_regions, zcol="huc_region", layer.name="HUC Regions", alpha.regions=0.1)
-# 
-# # save back out for later
-# save(bmi_csci_por_trim, file = "data_output/07_selected_bmi_csci_por_trim_w_huc_region.rda")
+# # 
+# # # save back out for later
+# save(algae_asci_por_trim, file = "output_data/04_selected_algae_asci_por_trim_w_huc_region.rda")
 
 
 # 02. Select a Region ---------------------------------------------------------
 
 # make a simpler layer for mapping
-bmi_csci_sites <- bmi_csci_por_trim %>% 
-  dplyr::distinct(StationCode, ID, .keep_all = TRUE)
+algae_asci_sites <- algae_asci_por_trim %>% 
+  dplyr::distinct(StationID, ID, .keep_all = TRUE)
 
 # if selecting by a specific region use region select
 # list regions ("central_valley", "great_basin", "north_coast", "south_coast")
-table(bmi_csci_sites$huc_region)
+table(algae_asci_sites$huc_region)
 
 modname <- "central_valley"   # or "all_ca_ffc_only"
 Hregions <- c(modname) # set a region or regions
 
 # now filter data to region(s) of interest
-region_sel <- bmi_csci_por_trim %>% filter(huc_region %in% Hregions)
+region_sel <- algae_asci_por_trim %>% filter(huc_region %in% Hregions)
 
 mapview(region_sel, zcol="huc_region", viewer.suppress=FALSE)
 
-# 03. Select BMI Response Variable for GBM ------------------------------
+# 03. Select algae Response Variable for GBM ------------------------------
 
 # get metrics
-bmi.metrics<-c("csci")
+algae.metrics<-c("asci")
 
 # PICK RESPONSE VAR FOR MODEL
 hydroDat <- "POR" # can be Annual, Lag1, Lag2, POR
-bmiVar <- quote(csci) # select response var from list above
+algaeVar <- quote(MMI.hybrid) # select response var from list above
 
 # 04. Setup POR Data for Model ----------------------------------------------------------------
+head(region_sel)
 
+names(region_sel)
 # need to select and spread data: 
 data_por <- region_sel %>% st_drop_geometry() %>% 
-  dplyr::select(StationCode, SampleID, HUC_12, ID, comid_ffc, comid_bmi,
-                YMD, YYYY, csci, huc_region, CEFF_type,
+  dplyr::select(StationID, SampleID_old, HUC_12, ID, comid_ffc, comid_algae,
+                YMD, YYYY, MMI.hybrid, huc_region.x, CEFF_type,
                 metric, status_code 
   ) %>% 
   # need to spread the metrics wide
   pivot_wider(names_from = metric, values_from = status_code) %>% 
-  mutate(huc_region = as.factor(huc_region),
+  mutate(huc_region = as.factor(huc_region.x),
          CEFF_type = as.factor(CEFF_type)) %>% 
   as.data.frame()
 
 # check how many NAs per col
 #summary(data_por)
-dim(data_por)
+dim(data_por) 30   36
 data_names <- names(data_por)
 
 # remove cols that have more than 70% NA
@@ -156,7 +167,7 @@ dim(data_por)
 # find the cols that have been dropped
 setdiff(data_names, names(data_por))
 
-# seems SP_Dur is largely NA, only col that was dropped
+# seems SP_Dur is largely NA, only col that was dropped - yep!
 
 # 05. Split Train/Test Data -------------------------------------------------------------------
 
@@ -170,13 +181,13 @@ data_por_split <- initial_split(data_por, prop = .9)
 # make training dataset
 #data_por_train <- training(data_por_split) %>% 
 data_por_train <- data_por %>% # use all data
-  dplyr::select({{bmiVar}}, 12:ncol(.)) %>%  # use 12 if not including HUC region and CEFF_type
-  dplyr::filter(!is.na({{bmiVar}})) %>% as.data.frame()
+  dplyr::select({{algaeVar}}, 12:ncol(.)) %>%  # use 12 if not including HUC region and CEFF_type
+  dplyr::filter(!is.na({{algaeVar}})) %>% as.data.frame()
 
 # make testing set
 data_por_test <- testing(data_por_split) %>% 
-  dplyr::select({{bmiVar}}, 12:ncol(.)) %>% 
-  filter(!is.na({{bmiVar}})) %>% as.data.frame()
+  dplyr::select({{algaeVar}}, 12:ncol(.)) %>% 
+  filter(!is.na({{algaeVar}})) %>% as.data.frame()
 
 # double check cols are what we want
 names(data_por_train)
@@ -192,8 +203,8 @@ hyper_grid <- expand.grid(
 )
 
 # double check and view
+hyper_grid <- hyper_grid[-c(7:18),] ## gbm did not work - data too small
 hyper_grid
-
 # load the GBM.step function (requires dismo and function loaded)
 gbm_fit_step <- function(
   shrinkage, interaction.depth, n.minobsinnode, bag.fraction, data) {
@@ -244,7 +255,7 @@ hyper_grid %>%
     head(n=1))
 
 # write these all out to a file for reference later
-(gbm_file <- paste0("models/07_gbm_final_",tolower(as_name(bmiVar)),"_", tolower(hydroDat), "_", modname, "_hypergrid"))
+(gbm_file <- paste0("models/05b_gbm_final_",tolower(as_name(algaeVar)),"_", tolower(hydroDat), "_", modname, "_hypergrid"))
 
 # check for file and delete?
 if(fs::file_exists(path = paste0(gbm_file,".csv"))){
@@ -287,7 +298,7 @@ gbm_final_step <- function(
 }
 
 # set up filename for best model outputs
-(gbm_best_file <- paste0("models/07_gbm_final_",tolower(as_name(bmiVar)),"_", tolower(hydroDat), "_", modname, "_", "model_output.txt"))
+(gbm_best_file <- paste0("models/05b_gbm_final_",tolower(as_name(algaeVar)),"_", tolower(hydroDat), "_", modname, "_", "model_output.txt"))
 
 # check for file and delete?
 if(fs::file_exists(path = gbm_best_file)){
@@ -326,13 +337,13 @@ write_tsv(hyper_best, path = gbm_best_file,
 # 10. SAVE FINAL GBM AND DATA ---------------------------------------------------------------
 
 # reassign names for RI outputs and save:
-assign(x = tolower(paste0("gbm_final_", as_name(bmiVar),"_",hydroDat, "_",modname)), value=gbm_fin_out)
+assign(x = tolower(paste0("gbm_final_", as_name(algaeVar),"_",hydroDat, "_",modname)), value=gbm_fin_out)
 
 # get file name
-(fileToSave <- ls(pattern = paste0("gbm_final_", tolower(as_name(bmiVar)))))
+(fileToSave <- ls(pattern = paste0("gbm_final_", tolower(as_name(algaeVar)))))
 
 # save to RDS
-write_rds(x = get(fileToSave), path = paste0("models/07_",fileToSave, "_model.rds"), compress = "gz")
+write_rds(x = get(fileToSave), path = paste0("models/05b_",fileToSave, "_model.rds"), compress = "gz")
 
 # Save all the datasets used in the model:
-save(list = ls(pattern="data_"), file = tolower(paste0("models/07_",fileToSave,"_model_data.rda")))
+save(list = ls(pattern="data_"), file = tolower(paste0("models/05b_",fileToSave,"_model_data.rda")))
