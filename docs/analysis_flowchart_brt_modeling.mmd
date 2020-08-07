@@ -1,0 +1,18 @@
+graph TB;
+
+  A(BMI CSCI Data)-.->|QA/QC| C[Join Spatially: Gage / BMI points <br>in same HUC12]
+  B(USGS: <br> Download & Clean Reference Gage Data)-.->|>10 years of data| C
+  C--> D(Get NHD Flowline COMIDs for BMI and USGS Points)
+  D--> E>Filter to BMI COMIDs in same <br> NHD mainstem streamline as USGS gages]
+  D--> F((STOP: <br><br> BMI COMID not on <br>mainstem USGS <br>streamline))
+  F--> G(Calculate BMI Metrics)
+  H--Filter to Flow Data >1994 <br> to match ecological data period--> I(Calculate Functional Flow Metrics <br> for selected Gages)
+  H--> I(Boosted Regression Tree Modeling:<br> CSCI:<br> vs Alteration Status)
+  I--> J
+  J-- ALTERATION Models --> K(Alteration Models: Identify metrics that most strongly indicate flow alteration)
+  
+  style A fill:#ffd996,stroke:#f09b00,stroke-width:8px
+  style B fill:#a5a5ff,stroke:#0000a5,stroke-width:4px
+  style H fill:#ffd996,stroke:#f09b00,stroke-width:4px
+  style I fill:#a5a5ff,stroke:#0000a5,stroke-width:4px
+  style G fill:#ffc0cb,stroke:#b40000,stroke-width:4px

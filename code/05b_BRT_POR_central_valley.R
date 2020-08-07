@@ -255,7 +255,7 @@ hyper_grid %>%
     head(n=1))
 
 # write these all out to a file for reference later
-(gbm_file <- paste0("models/05b_gbm_final_",tolower(as_name(algaeVar)),"_", tolower(hydroDat), "_", modname, "_hypergrid"))
+(gbm_file <- paste0("models/05_gbm_final_",tolower(as_name(algaeVar)),"_", tolower(hydroDat), "_", modname, "_hypergrid"))
 
 # check for file and delete?
 if(fs::file_exists(path = paste0(gbm_file,".csv"))){
@@ -298,7 +298,7 @@ gbm_final_step <- function(
 }
 
 # set up filename for best model outputs
-(gbm_best_file <- paste0("models/05b_gbm_final_",tolower(as_name(algaeVar)),"_", tolower(hydroDat), "_", modname, "_", "model_output.txt"))
+(gbm_best_file <- paste0("models/05_gbm_final_",tolower(as_name(algaeVar)),"_", tolower(hydroDat), "_", modname, "_", "model_output.txt"))
 
 # check for file and delete?
 if(fs::file_exists(path = gbm_best_file)){
@@ -343,7 +343,7 @@ assign(x = tolower(paste0("gbm_final_", as_name(algaeVar),"_",hydroDat, "_",modn
 (fileToSave <- ls(pattern = paste0("gbm_final_", tolower(as_name(algaeVar)))))
 
 # save to RDS
-write_rds(x = get(fileToSave), path = paste0("models/05b_",fileToSave, "_model.rds"), compress = "gz")
+write_rds(x = get(fileToSave), path = paste0("models/05_",fileToSave, "_model.rds"), compress = "gz")
 
 # Save all the datasets used in the model:
-save(list = ls(pattern="data_"), file = tolower(paste0("models/05b_",fileToSave,"_model_data.rda")))
+save(list = ls(pattern="data_"), file = tolower(paste0("models/05_",fileToSave,"_model_data.rda")))

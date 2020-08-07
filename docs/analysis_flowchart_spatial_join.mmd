@@ -1,0 +1,19 @@
+graph TB;
+style A fill:#ffd996,stroke:#f09b00,stroke-width:4px
+style B fill:#ffd996,stroke:#f09b00,stroke-width:4px
+style C fill:#a5a5ff,stroke:#0000a5,stroke-width:4px
+style D stroke:#4B1589,stroke-width:3px
+style E stroke:#4B1589,stroke-width:3px
+style F stroke:#4B1589,stroke-width:3px
+style G fill:#ffc0cb,stroke:#b40000,stroke-width:4px
+style H fill:#3CB371,stroke:#006400,stroke-width:3px
+style I fill:#3CB371,stroke:#006400,stroke-width:3px
+  A(<b>BMI data</b>)-->B(<b>CSCI scores</b>)
+  B-.->|Sampled May-Sep| D[<center><b>Join Spatially:</center>1.</b> Retain USGS gages/BMI sites in same HUC12]
+  C(<center><b>USGS:</b><br> Download & clean gage data</center>)-.->|>10 years of data| D
+  D--> E[<b>2.</b> Assign NHD stream segment to <br> each BMI site and USGS gage]
+  E--> F[<center><b>3.</b> Identify and pair BMI sites with USGS gages <br> connected by mainstem NHD stream segments<br>less than 10 km apart with no major tributary inflows</center>]
+  F-->G{<center><b>STOP:</b><br><br> BMI site not on <br>mainstem streamline<br>of USGS gage</center>}
+  F--> H(Filter to Flow Data >1994 <br> to match ecological data period)
+  H--> I(<center>Calculate Functional Flow Metrics & Alteration Status<br>for Boosted Regression Tree Models</center>)
+

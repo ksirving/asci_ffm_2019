@@ -39,13 +39,13 @@ algae_asci_sites <- algae_asci_por_trim %>%
 # "central_valley", "great_basin", "north_coast", "south_coast", 
 
 hydroDat <- "POR" # can be Annual, Lag1, Lag2, POR
-modname <- "all_ca_ffc_only" # model name 
+modname <- "south_coast" # model name 
 plotname <- "All Site Pairs"  #"Central Valley" #"All Site Pairs"
 algaeVar <- quote(MMI.hybrid) # select response var
 
 # make pathnames
 (mod_pathname <- paste0("05_gbm_final_", tolower(algaeVar), "_",tolower(hydroDat), "_",modname))
-(mod_savename <- tolower(paste0("06_gbm_", as_name(algaeVar), "_",hydroDat, "_",modname)))
+(mod_savename <- tolower(paste0("05_gbm_", as_name(algaeVar), "_",hydroDat, "_",modname)))
 
 # get the gbm model:
 (brt <- list.files(path="models/", pattern = paste0("^", mod_pathname,".*\\.rds$")))
@@ -86,10 +86,7 @@ gbm_fin_RI <- gbm_fin_RI %>%
   rename(RI = rel.inf)
 
 ## Now Plot ALL
-quartz
-plotname
-dev.off()
-head(fin_ri)
+
 fin_ri <- gbm_fin_RI %>% 
     arrange(desc(RI)) %>% 
     #filter(RI > 3) %>% #View()
@@ -202,12 +199,12 @@ ggsave(filename=tolower(paste0("models/", mod_savename, "_all_RI_permtest.png"))
 ggsave(filename=tolower(paste0("models/", mod_savename, "_top_RI_permtest.png")), width = 9, height = 7, units = "in", dpi = 300)
 
 # Plot Side by Side -------------------------------------------------------
-
+#### fix here!!!!
 # library(cowplot)
-
+# # 
 # (pg1 <- plot_grid(fin_ri_top, fin_pt_top, align = "h", labels=c("A","B")))
-# 
-# cowplot::save_plot(pg1, filename = tolower(paste0("models/08_gbm_", as_name(algaeVar), "_", hydroDat,"_top_RI_both", ".png")), base_width = 11, units = "in", dpi = 300)
+# #
+# cowplot::save_plot(pg1, filename = tolower(paste0("models/06_gbm_", as_name(algaeVar), "_", hydroDat,"_top_RI_both", ".png")), base_width = 11, units = "in", dpi = 300)
 
 
 # 03. COMBINE RIs AND SAVE -----------------------------------------------------
@@ -242,11 +239,16 @@ library(pdp)
 (bestHydro_ri <- gbm_fin_RI %>% top_n(n = 3, RI))
 (bestHydro_pt <- gbm_fin_PT %>% top_n(n = 3, RI))
 
-## ICE (Individual conditional expectation) plots: rather than plot the average marginal effect on the response variable, we plot the change in the predicted response variable for each observation as we vary each predictor variable.
+## ICE (Individual conditional expectation) plots: rather than plot the average marginal effect on the response variable, 
+## we plot the change in the predicted response variable for each observation as we vary each predictor variable.
 
-## The equivalent to a PDP for individual data instances is called individual conditional expectation (ICE) plot (Goldstein et al. 2017). An ICE plot visualizes the dependence of the prediction on a feature for each instance separately, resulting in one line per instance, compared to one line overall in partial dependence plots.
+## The equivalent to a PDP for individual data instances is called individual conditional expectation (ICE) plot 
+## (Goldstein et al. 2017). An ICE plot visualizes the dependence of the prediction on a feature for each instance separately, 
+## resulting in one line per instance, compared to one line overall in partial dependence plots.
 
-# When the curves have a wide range of intercepts and are consequently “stacked” on each other, heterogeneity in the response variable values due to marginal changes in the predictor variable of interest can be difficult to discern, thus centering can help
+# When the curves have a wide range of intercepts and are consequently “stacked” on each other, heterogeneity in the 
+# response variable values due to marginal changes in the predictor variable of interest can be difficult to discern, 
+# thus centering can help
 
 varNo <- 3 # single number makes single plot
 
@@ -271,45 +273,42 @@ ggsave(filename=paste0("models/", mod_savename, "_pdp_ice_",
 
 
 
-
-
-
 # Z-archive this chunk: USE DALEX ---------------------------------------------------------------
 
-gbm_explain <- explain(gbm_final, data=gbm_out_train[,-1], y=gbm_out_train$asci)
-gbm_explain_tst <- explain(gbm_final, data=gbm_out_test[,-1], y=gbm_out_test$asci)
-
-# feature importance
-gbm_feat <- feature_importance(gbm_explain)
-plot(gbm_feat, max_vars=12)
-
-gbm_feat_tst <- feature_importance(gbm_explain_tst)
-plot(gbm_feat_tst, max_vars=12)
-
-# look at explained variance for a specific observation(s)
-library(iBreakDown)
-gbm_breakdown <- break_down(gbm_explain, new_observation = gm_out_test[,-1], keep_distributions=TRUE)
-gbm_shap <- shap(gbm_explain, gbm_out_test[,-1])
-plot(gbm_breakdown, baseline=0)
-plot(gbm_shap)
-
-# describe a bit more
-describe(gbm_breakdown)
-describe(gbm_shap)
-
-
-# partial dependency using ingredients (only works w/ no NAs)
-# gbm_pd <- partial_dependence(gbm_explain_tst, N=50, variables=c("SP_ROC","SP_Dur"))
-# plot(gbm_pd)
+# gbm_explain <- explain(gbm_final, data=gbm_out_train[,-1], y=gbm_out_train$asci)
+# gbm_explain_tst <- explain(gbm_final, data=gbm_out_test[,-1], y=gbm_out_test$asci)
 # 
-# # ceteris_paribus (only works w/ data w/out NAs)
-# gbm_cp_pg <- ceteris_paribus(gbm_explain_tst, 
-#                               new_observation = gm_out_test[1,],
-#                               variables="SP_Dur")
-# plot(gbm_cp_pg)
-
-# predict values for test data
-pred <- predict(gbm_final, n.trees = gbm_final$n.trees, gm_out_test)
-
-# results
-caret::RMSE(pred, gm_out_train[,1])
+# # feature importance
+# gbm_feat <- feature_importance(gbm_explain)
+# plot(gbm_feat, max_vars=12)
+# 
+# gbm_feat_tst <- feature_importance(gbm_explain_tst)
+# plot(gbm_feat_tst, max_vars=12)
+# 
+# # look at explained variance for a specific observation(s)
+# library(iBreakDown)
+# gbm_breakdown <- break_down(gbm_explain, new_observation = gm_out_test[,-1], keep_distributions=TRUE)
+# gbm_shap <- shap(gbm_explain, gbm_out_test[,-1])
+# plot(gbm_breakdown, baseline=0)
+# plot(gbm_shap)
+# 
+# # describe a bit more
+# describe(gbm_breakdown)
+# describe(gbm_shap)
+# 
+# 
+# # partial dependency using ingredients (only works w/ no NAs)
+# # gbm_pd <- partial_dependence(gbm_explain_tst, N=50, variables=c("SP_ROC","SP_Dur"))
+# # plot(gbm_pd)
+# # 
+# # # ceteris_paribus (only works w/ data w/out NAs)
+# # gbm_cp_pg <- ceteris_paribus(gbm_explain_tst, 
+# #                               new_observation = gm_out_test[1,],
+# #                               variables="SP_Dur")
+# # plot(gbm_cp_pg)
+# 
+# # predict values for test data
+# pred <- predict(gbm_final, n.trees = gbm_final$n.trees, gm_out_test)
+# 
+# # results
+# caret::RMSE(pred, gm_out_train[,1])

@@ -1,0 +1,483 @@
+---
+title: "Linking BMI Data with USGS Gage Data"
+author: "Ryan Peek"
+date: "Updated: `r format(Sys.Date())`"
+output: 
+  html_document:
+    highlight: pygments
+    theme: yeti
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Linking Hydrology with Benthic Macroinvertebrate Data
+
+The basic objective is to identify relationships between BMI and functional flow metrics (FFM) to prioritize ecological outcomes from an environmental flow perspective.
+
+Some main points:
+ 
+ > + Are there patterns in the flow metrics that correlate with patterns in the BMI metrics (i.e., CSCI)?
+ 
+Linked metrics could play a more important role in assessment, monitoring, and environmental flow management.
+ 
+ > + If patterns or linkages are observed, do these help identify if certain metrics or times of year are more important than others? Which FFM should matter most for the data we have, and taxa/metrics indicate a relationship?
+ 
+If certain patterns or relationships are identified, we know that while not causal, it can be inferred that all the FFM are altered with flow regulation, thus there is going to be an impact or effect on BMI communities that link with hydrologic metrics. Linking patterns across a hydrologic disturbance gradient is important. Ultimately we really want to know at hydrologic reference sites (e.g., hydro "unimpaired"), how these linkages compare to non-references sites (more unimpaired). There is a hydroloic continuum of disturbance across these gages across the landscape.
+ 
+
+It's important to remember that while a single metric or set of metrics may be useful for monitoring, assessment, or evaluating ecological outcomes of environmental flow implementation, they are likely *all* important.
+
+## Data
+
+Data come from two main sources:
+
+ - SCCWRP Statewide BMI Data
+ - USGS Gages evaluated by CEFF and selected to be "*reference*"
+ 
+The raw BMI data contains 310,224 records from May 1994 through Dec 2018. The USGS data has 223 reference gages, with a more stringent set of about 92 gages. We expanded to a set of 250 identified by TNC that pass GagesII and USGS reference requirements.
+ 
+## Data Tidying
+
+**Main Steps**
+
+ 1. Clean BMI data and USGS data, filter to data in same HUC12
+ 2. Filter to gage data that overlaps temporally with BMI data (>1994)
+ 3. Using COMID of selected gages, get upstream COMIDs and assess whether BMI sites fall into any of the upstream COMIDs in the same catchment as the gage.
+ 4. Get flow data and FFM for the median/range for the period of record, look at aggregate distributions vs. CSCI and BMI metrics.
+ 5. Pairwise comparison for BMI - USGS pairs for data from same year for repeated surveys (at same site).
+
+
+Libraries required:
+
+```{r libsshow, eval=F, echo=T}
+
+library(sf)
+library(tidyverse)
+library(tmap)
+library(USAboundaries)
+library(nhdplusTools)
+library(mapview)
+library(purrr)
+library(here)
+
+```
+
+
+```{r libsload, echo=F, eval=T}
+
+suppressPackageStartupMessages({
+  library(sf);
+  library(tidyverse);
+  library(tmap);
+  library(USAboundaries);
+  library(nhdplusTools);
+  library(mapview);
+  library(purrr);
+  library(here);
+  library(knitr)
+})
+
+load(file = paste0(here::here(), "/data_output/gages_final_250.rda")) # all gages
+load(file = paste0(here::here(), "/data_output/bmi_stations_distinct_samples.rda"))
+load(file = paste0(here::here(), "/data_output/bmi_stations_distinct_ref_nonref.rda"))
+load(file = paste0(here::here(), "/data_output/bmi_stations_distinct_xy_methods.rda"))
+load(file = paste0(here::here(), "/data_output/bmi_stations_distinct_samples.rda"))
+load(file= paste0(here::here(), "/data_output/huc12_sf.rda"))
+load(file = paste0(here::here(), "/data_output/selected_dat_by_h12_filter.rda"))
+load(file = paste0(here::here(), "/data_output/sel_bmi_sites_comids.rda"))
+load(file = paste0(here::here(), "/data_output/sel_gages_bmi_sf_3310.rda"))
+load(file = paste0(here::here(), "/data_output/gages_nhd_flowlines_upstream.rda"))
+
+basemapsList <- c("Esri.WorldTopoMap", "Esri.WorldImagery","Esri.NatGeoWorldMap",
+                  "OpenTopoMap", "OpenStreetMap", 
+                  "CartoDB.Positron", "Stamen.TopOSMFeatures")
+
+mapviewOptions(basemaps=basemapsList)
+
+```
+
+### BMI Cleaning
+
+The data were cleaned using the `dplyr`, `tidyr` and `CSCI` packages. 
+
+ 1. Dates were formatted, new `SampleID`'s were generated using the following format: *`StationCode_YYYYMMDD_Collectionmethodcode_replicate`*  
+ 2. `cleanData(bmi, purge = T)` was run on the dataset, and 8 records were dropped, leaving n=310,216
+ 3. Distinct samples were assessed using the code below, yielding **5,662** unique spatial/temporal records.
+ 
+ ```
+ sample_distinct <- bugs_filt %>% 
+  distinct(StationCode, sampledate, collectionmethodcode, replicate)
+  ```
+ 
+ 4. Distinct stations (based on lat/lon and stationcode names) were identified (n=3,765).
+ 5. Data were saved for further processing.
+ 
+```{r bmiMapSamplingMethods, eval=T, echo=T}
+
+# static tmap of collection methods
+library(tmap)
+ca <- USAboundaries::us_states(resolution="low", states = "ca")
+
+# first make CA map with no border
+map_ca <- tm_shape(ca) + tm_polygons() + 
+  tm_compass(type = "arrow", position = c("right", "top"), size = 1.5) +
+  tm_scale_bar(position = c("left", "bottom"), breaks = c(0, 100, 200), text.size = 0.4) +
+  tm_layout(frame=FALSE) #+
+#map_ca  
+
+# then add bug stations by collection method
+(tm_ca_bmi_sites <- map_ca + tm_shape(bmi_stations) +
+  tm_symbols(col="collectionmethodcode", border.col = "gray30", size=0.4) +
+  tm_facets(by = "collectionmethodcode", nrow = 2,free.coords = FALSE) + 
+  tm_layout(legend.show = F, legend.outside = TRUE, 
+            #legend.outside.position = c(0.5, 0.2), 
+            legend.outside.size = 0.4))
+
+#tmap_save(filename = "figs/sampling_location_by_collectionmethod.png", width = 11, height = 8, dpi = 300, units = "in")
+```
+
+
+```{r bmiMapSamplingMethodsDynamic, eval=T, echo=T, warning=F, message=F}
+
+# leaflet map:
+tm_ca_bmi_sites <- map_ca + tm_shape(bmi_stations) +
+  tm_symbols(col="collectionmethodcode", border.col = "gray30", size=0.4) +
+  tm_layout(legend.show = F, legend.outside = TRUE, 
+            legend.outside.size = 0.4)
+
+tmap_leaflet(tm_ca_bmi_sites)
+
+# mapview of collection methods
+# mapview(bug_stations, zcol="collectionmethodcode", 
+#          #col.regions="orange", 
+#          layer="Benthos", cex=4, alpha=0.8)
+
+```
+ 
+Once data were cleaned and joined, BMI metrics were calculated using the CSCI package:
+
+```{r, eval=F, echo=T}
+# Coerce data into a “BMI” data object for generating metrics
+bugdata <- BMI(bug_trc)
+
+# #Subsample to 500 individuals and aggregate
+bugdata_samp <- sample(bugdata)
+bugdata_agg <- aggregate(bugdata_samp) 
+
+# Calculate metrics at SAFIT Level 1
+bug_metrics <- BMIall(bugdata_agg, effort=1)
+
+```
+
+ 
+### USGS Cleaning
+
+To clean the USGS data, we used the original 223 selected by CEFF, and added some additional stations from USGS/TNC work. The resulting 250 stations were used as the final USGS gage data set for this analysis. Data were cleaned, made spatial with the `sf` package, and saved for further analysis.
+
+
+```{r usgsMapGages, eval=T, echo=F, warnings=F, message=F}
+
+mapview(gages_final, col.regions="cyan", legend=T, layer.name="USGS Gages") + 
+  mapview(bmi_stations, col.regions="darkgray", cex=4, legend=T, layer.name="All BMI Sites", alpha.regions=0.4)
+
+```
+
+
+## Linking BMI with USGS
+
+To link stations across space and time, we first selected USGS gages that have data post 1994, to ensure flow data overlaps with the BMI data. The result was 110 USGS gages which have data inside the same time frame as the BMI stations.
+
+**Filter to same time frame**
+
+```{r filterGageByYr, eval=F, echo=T}
+
+# so 110 gages meet temporal scale
+gages_final2 <- gages_final %>% filter(REF_END_YEAR>1994)
+
+```
+
+Next we looked at what **`HUC12`** each BMI point and USGS point fell inside of and filtered to only stations/gages which shared a HUC12.
+
+```{r filterByH12, eval=F, echo=T}
+
+# fix H12 areas
+h12 <- h12 %>% 
+  mutate(h12_area_sqkm=Shape_Area/1e6)
+
+# Add H12 to points to BMI and Gages (adds ATTRIBUTES, retains ALL pts if left=TRUE)
+bmi_h12 <- st_join(bmi_stations, left = FALSE, h12[c("HUC_12","h12_area_sqkm")]) #
+gages_h12 <- st_join(gages_final2, left=FALSE, h12[c("HUC_12")]) %>% 
+  select(ID, HUC_12) %>% as_tibble() %>% select(-geometry)
+
+# now join based on H12: how many are in same?
+sel_bmi_gages <- inner_join(bmi_h12, gages_h12, by="HUC_12") %>% distinct(StationCode, .keep_all = T)
+
+# number of unique h12s in BMI dataset?
+length(unique(factor(bmi_h12$HUC_12))) # 1082
+
+# number of unique H12s in Gages dataset?
+length(unique(gages_h12$HUC_12)) # 102
+
+# so 210 possible BMI sites, 53 gages, in 53 HUC12's
+length(unique(sel_bmi_gages$ID))  # 53 USGS gages/H12's
+sel_bmi_gages %>% group_by(StationCode, collectionmethodcode) %>% nrow() # 210 rows
+
+
+```
+
+**That yielded 210 possible BMI sites, and 53 gages across 53 HUC12's.**
+
+```{r mapviewPossibleStations, eval=T, echo=F}
+
+m1 <- mapview(sel_bmi_gages, col.regions="orange", layer.name="Benthos", alpha=0.5, cex=9) +
+  mapview(sel_gages_bmi, col.regions="blue", layer.name="Gages", cex=4) + 
+  mapview(sel_h12_bmi, layer="H12", color="dodgerblue", col.regions="cyan", alpha=0.8, lwd=1)
+
+# add measure option  
+m1@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
+
+```
+
+### Filtering to BMI Nearest USGS with `RANN`
+
+Using the `RANN` package, it's possible to select stations based on nearest distance to a given point. Unfortunately this is irrelevant to whether BMI stations occur in the same drainage as a USGS station, it is merely based on Euclidean distance. So while it can help to filter to the nearest station, it isn't a great way to uniformly select stations. See a few examples below with the code.
+
+```{r RANN, eval=F, echo=T}
+
+# look for nearest gages (need to use UTM proj)
+library(RANN)
+
+## TRANSFORM TO SAME DATUM
+sel_bmi_sf <- st_transform(sel_bmi_gages, crs = 3310) # use CA Teal albs metric
+sel_gages_sf <- st_transform(sel_gages_bmi, crs=3310)
+
+# get coordinate matrices, could be points and lines or lines and points
+sel_bmi_coords <- do.call(rbind, st_geometry(sel_bmi_sf))
+sel_bmi_coords <- cbind(sel_bmi_coords, 1:nrow(sel_bmi_coords), sel_bmi_sf$StationCode) %>% as_tibble() %>% 
+  mutate(V3=as.integer(V3))
+sel_graph_coords <- do.call(rbind, st_geometry(sel_gages_sf))
+
+# fast nearest neighbour search for single nearest
+sel_closest <- nn2(sel_bmi_coords[,1:2], sel_graph_coords, k = 1, searchtype = "standard")
+sel_closest <- sel_closest %>% bind_cols() %>% as_tibble() %>% 
+  left_join(., as_tibble(sel_bmi_coords[,c(3:4)]), by=c("nn.idx"="V3")) %>% 
+  dplyr::rename(StationCode=V4)
+# join with spatial data
+sel_closest_sf <- left_join(sel_closest, sel_bmi_sf,  by=c("StationCode")) %>% 
+  st_as_sf(., sf_column_name="geometry", crs=3310)
+
+# fast search for radius, select nearest 3 stations within 5 km radius
+sel_closest_5k <- nn2(sel_bmi_coords[,1:2], sel_graph_coords, k=3, searchtype = "radius", radius = 5000) # in meters
+# make into dataframe
+sel_closest_5k <- sapply(sel_closest_5k, cbind) %>% as_tibble() %>% 
+  left_join(., as_tibble(sel_bmi_coords[,c(3:4)]), by=c("nn.idx"="V3")) %>% dplyr::rename(StationCode=V4) %>% 
+  # filter NAs
+  filter(!is.na(StationCode))
+
+# join with spatial data
+sel_closest_5k_sf <- left_join(sel_closest_5k, sel_bmi_sf,  by=c("StationCode")) %>% 
+  st_as_sf(., sf_column_name="geometry", crs=3310)
+
+# MAP IT (closest)
+m2 <- mapview(sel_bmi_gages, col.regions="orange", layer.name="Benthos", alpha=0.5, cex=3) +
+  mapview(sel_gages_bmi, col.regions="blue", layer.name="Gages", cex=8, alpha=0.8) + 
+  mapview(sel_h12_bmi, layer="H12", color="dodgerblue", col.regions="blue", alpha.regions=0.2) +
+  mapview(sel_closest_sf, layer.name="Nearest BMI site to Gage", cex=9, col.regions="maroon") +
+  mapview(sel_closest_5k_sf, layer.name="5k Radius BMI to Gage", cex=9, col.regions="salmon")
+
+# add measure option  
+m2@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
+
+```
+
+
+**Nearest BMI Site to Gage**
+
+```{r h12nearestBMI, eval=T, echo=F, out.width="75%"}
+
+include_graphics(paste0(here(), "/docs/insideH12_nearestBMI_gage.png"))
+
+```
+
+**Nearest 3 sites within 5km of USGS Gage**
+
+```{r h12nearestBMI5k, eval=T, echo=F, out.width="70%"}
+
+include_graphics(paste0(here(), "/docs/insideH12_radius5km.png"))
+
+```
+
+**Nearest Sites within 5km in Adjacent Watershed**
+
+```{r h12nearestBMI5kAdj, eval=T, echo=F, out.width="70%"}
+
+include_graphics(paste0(here(), "/docs/insideH12_nearestBMI_adjacent.png"))
+
+```
+
+### Filtering to BMI Nearest USGS with Flowline Networks (`nhdplusTools`)
+
+An alternative option is to assess whether the BMI sites are in the same immediate drainage network as the USGS gage (using the NHDPlus COMIDs). For this, the very handy [`nhdplusTools`](https://usgs-r.github.io/nhdplusTools/) package was used to derive the upstream flowline network and catchment for each of the 53 gages that were in the same HUC12 as a BMI station, and had data post 1994.
+
+ - First we looked up the COMID for each of the BMI stations selected using the `discover_nhdplus_id`. This was used to compare against the flowline network upstream of each USGS gage.
+
+```{r getBMIcomids, eval=F, echo=T}
+
+library(nhdplusTools)
+
+# get the comid for the BMI point using purrr
+bmi_segs <- sel_bmi_sf %>% split(.$StationCode) %>%
+  map(~discover_nhdplus_id(.x$geometry))
+bmi_segs_df <- bmi_segs %>% flatten_df() %>% t() %>% as.data.frame() %>% rownames_to_column("StationCode") %>% rename("comid"=V1)
+
+```
+
+- Next we used `purrr` to loop through and download the NHDplus flowline network **upstream** from each of the selected USGS gages (n=53). 
+
+```{r getUSflowline, eval=F, echo=T}
+
+# using purrr::map
+coms <- sel_gages_sf$NHDV2_COMID # specify the comid's of interest (where USGS gages are)
+coms_list <- map(coms, ~list(featureSource = "comid", featureID=.x)) # create download list
+
+# Test function to make sure data avail. for each COMID
+# feat_check <- map(coms_list, ~discover_nldi_navigation(.x))
+
+# Download upstream Tributaries and flowline networks for each of the gages:
+mainstems <- map(coms_list, ~navigate_nldi(nldi_feature = .x,
+                                          mode="upstreamTributaries",
+                                          data_source = ""))
+
+# Take list set the col names to the Gage ID, and add Gage ID column:
+mainstems_flat <- mainstems %>%
+  set_names(., sel_gages_sf$ID) %>%
+  map2(sel_gages_sf$ID, ~mutate(.x, gageID=.y))
+
+# Bind together and convert to a single flat layer (dataframe):
+mainstems_flat <- do.call(what = sf:::rbind.sf,
+          args = mainstems_flat)
+
+```
+
+<!--
+**See Flowlines for each gage, in relation to BMI sites**
+```{r mapviewFlowlines, eval=T, echo=F}
+
+mapview(mainstems_flat, legend=F) + 
+  mapview(sel_gages_sf, col.regions="cyan", cex=5) +
+  mapview(sel_bmi_sf, col.regions="orange", cex=7)
+
+```
+
+```{r tmapFlowlinesINset, echo=F, eval=F}
+
+
+ca <- USAboundaries::us_states(resolution="low", states = "ca")
+
+sel_gages_sf <- sel_gages_sf %>% st_transform(4326)
+
+map_ca <- tm_shape(ca) + tm_polygons() + 
+  tm_compass(type = "arrow", position = c("right", "top"), size = 2) +
+  tm_scale_bar(position = c("left", "bottom"), breaks = c(0, 100, 200), text.size = 0.7) +
+  tm_layout(frame=T, bg.color=NA) + tm_grid(x=seq(-126, -114,by=2), y=seq(32,44,by=2), col="gray80", alpha = 0.5)
+#tm_xlab("Lon.") + tm_ylab("Lat.")
+
+# make inset overview map
+inset_map <- tm_ca_flow_sites <- map_ca + tm_shape(sel_gages_sf) +
+    tm_symbols(col="dodgerblue", border.col = "gray30", size=0.4) + 
+    tm_shape(mainstems_flat) + tm_lines(lwd = 1.4, legend.col.show = F, col="darkblue") +
+  tm_layout(legend.show = F, legend.outside = TRUE, 
+            legend.outside.size = 0.4)
+
+# inset_map
+
+# make zoomed map bounding box first
+ca_region = st_bbox(c(xmin = -122.5, xmax = -119.5,
+                      ymin = 38, ymax = 39.5),
+                    crs = st_crs(mainstems_flat)) %>% 
+  st_as_sfc()
+
+# make the zoomed map
+zoom_map_ca <- tm_shape(ca, bbox = ca_region) + tm_polygons() + 
+  #tm_compass(type = "arrow", position = c("right", "top"), size = 2) +
+  tm_scale_bar(position = c("left", "bottom"), breaks = c(0, 10, 20), text.size = 0.7) +
+  tm_layout(frame=F, bg.color=NA) + tm_grid(x=seq(-122.5, -120,by=0.5), y=seq(38,40,by=0.5), col="gray80", alpha = 0.5)
+zoom_map_ca
+
+zoomed_lines_ca <- zoom_map_ca + tm_shape(sel_gages_sf) +
+  tm_symbols(col="dodgerblue", border.col = "gray30", size=0.4) + 
+  tm_shape(mainstems_flat) + 
+  tm_lines(lwd = 1.4, legend.col.show = F, col="darkblue") +
+  tm_layout(legend.show = F, legend.outside = TRUE, 
+            legend.outside.size = 0.4)
+
+library(grid)
+zoomed_lines_ca
+print(inset_map, vp=viewport(0.2, 0.65, width = 0.5, height = 0.7))
+
+```
+
+-->
+
+ - Finally, get Flowlines/Catchments/Waterbodies for each of the gages and flowline networks. Use these to filter to BMI stations that occur upstream of a USGS gages based on a COMID list. To do this, we generate a geopackage of all the necessary shps, so it's all in one place.
+ 
+**download NHDPlus Data**
+```{r geopackageFlowlines, eval=F, echo=T}
+
+# use above to get a geopackage for each gage
+subset_gpkg <-subset_nhdplus(comids = mainstems_flat$nhdplus_comid,
+                             output_file = "data_output/selected_nhd/sel_gages_upstream_flowlines.gpkg",
+                             #output_file = tempfile(fileext = ".gpkg"),
+                             nhdplus_data = "download", overwrite = T)
+
+```
+
+
+**Read in Shapes from geopackage**
+```{r readGpkg, eval=T, echo=T}
+
+# read in pieces
+dbcon <- src_sqlite(paste0(here::here(), "/data_output/selected_nhd/sel_gages_upstream_flowlines.gpkg"), create = F)
+#src_tbls(dbcon) # see tables in DB
+
+dbpath <- paste0(here::here(), "/data_output/selected_nhd/sel_gages_upstream_flowlines.gpkg")
+
+flowline <- read_sf(dbpath, "NHDFlowline_Network")
+catchment <-read_sf(dbpath, "CatchmentSP")
+# waterbody <- read_sf(dbpath, "NHDWaterbody")
+
+```
+ 
+ - Filter the BMI Stations (based on COMID) from the list of upstream NHD Comids, retain sites that occur upstream of a gage. This operation could be down for sites downstream as well. 
+ 
+### Final Map!
+ 
+ Here are the final sites, based on HUC12 and COMID flowline filters. The result is **98 possible BMI stations** associated with **53 USGS stations**.
+
+
+```{r filterBMIsegsUS, eval=T, echo=T}
+
+# check to see if comids in flowline ids
+keep_coms <- flowline %>% filter(comid %in% bmi_segs_df$comid) %>% left_join(., bmi_segs_df, by = "comid")
+
+# make a selected BMI station only:
+sel_bmi_final <- sel_bmi_sf %>% filter(StationCode %in% keep_coms$StationCode)
+
+# map of everything
+m3 <- mapview(keep_coms, cex=8, color="red", layer.name="Selected BMI COMIDs") +  
+  mapview(flowline, col.regions="blue", cex=3, layer.name="NHD U/S Flowline", legend=F)+
+  mapview(sel_gages_sf, col.regions="skyblue", cex=8, layer.name="Selected USGS Gages") + 
+  mapview(sel_bmi_sf, col.regions="gray", cex=3, alpha=0.5, layer.name="Other BMI Sites in H12") + 
+  mapview(sel_bmi_final, col.regions="orange", cex=6, layer.name="Selected BMI Sites") + 
+  mapview(sel_h12_bmi, col.regions="dodgerblue", alpha.region=0.1, color="darkblue", legend=F, layer.name="HUC12")
+  
+m3@map %>% leaflet::addMeasure(primaryLengthUnit = "meters") %>% leaflet.extras::addFullscreenControl(position = "bottomleft")
+
+```
+ 
+ 

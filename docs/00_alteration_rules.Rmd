@@ -1,0 +1,54 @@
+---
+title: "FFC Alteration Rules"
+author: "Ryan Peek"
+date: "Updated: `r format(Sys.Date())`"
+output: 
+  html_document:
+    bootstrap_version: 4+3
+    theme: sketchy
+    toc: false
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(bootstraplib)
+bs_theme_new(bootswatch = "sketchy") # sketchy, # materia # pulse # slate # yeti
+bs_theme_add_variables(`primary`="#44708C", `body-color` = "#111212", `input-border-color` = "#417F8E")
+#bs_theme_preview()
+
+
+```
+
+
+We need some rules to assess alteration. These can be applied across the functional flow metrics and easily updated with new or revised data.
+
+
+```{r echo=FALSE, eval=TRUE, out.width='60%'}
+
+knitr::include_graphics(paste0(here::here(),"/docs/fig2A_ff_components.png"))
+
+```
+
+
+
+###  **LIKELY UNALTERED:**
+ 
+  1. If <font color="blue">**observed**</font> median value falls within <font color="maroon">**predicted 10th-90th percentile interval**</font> (i.e., <font color="maroon">**`i80r` predicted percentiles**</font>) of reference-based FFM values **AND**
+  2. more than 50% of <font color="blue">**observed**</font> values fall within <font color="maroon">**`i80r` predicted percentiles**</font>, then FFM is considered “likely unaltered”
+
+### **LIKELY ALTERED:**
+
+  3. If <font color="blue">**observed**</font> median value falls outside of reference-based <font color="maroon">**`i80r` predicted percentiles**</font>, then FFM is considered “likely altered”. Specify direction of alteration (e.g., depleted/augmented, early/late, high/low, long/short)
+ 
+### **INDETERMINATE:**
+
+ 4. If median <font color="blue">**observed**</font> value falls within <font color="maroon">**`i80r` predicted percentiles**</font> **AND** 
+ 5. fewer than 50% of current values fall within <font color="maroon">**`i80r` predicted percentiles**</font>, then FFM is considered “indeterminate”
+
+
+```{r bib, include=FALSE}
+# KEEP THIS AT THE END OF THE DOCUMENT TO GENERATE A LOCAL bib FILE FOR PKGS USED
+knitr::write_bib(sub("^package:", "", grep("package", search(), value=TRUE)), file='skeleton.bib')
+```

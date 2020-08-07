@@ -1,0 +1,694 @@
+---
+title: "BRT BMI-Flow Metrics"
+date: "Updated: `r format(Sys.Date())`"
+output: 
+  html_document:
+    highlight: pygments
+    theme: yeti
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+
+suppressPackageStartupMessages({
+  library(tidyverse);
+  library(sf);
+  library(leaflet);
+  library(here);
+  library(mapview)
+  library("tidylog", warn.conflicts = FALSE)
+})
+
+
+```
+
+
+```{r getData}
+
+# get data from BRT outputs
+bmi_RI_combined <- readRDS(paste0(here(), "/data_output/gbms/11_gbm_RI_all_vars.rds"))
+load(paste0(here(), "/data_output/07_selected_bmi_stations_w_comids.rda"))
+load(paste0(here(), "/data_output/05_mainstems_us_ds_selected_gages.rda"))
+load(paste0(here(),"/data_output/06_selected_bmi_flow_metrics_w_csci_ANN.rda"))
+load(paste0(here(),"/data_output/06_selected_bmi_flow_metrics_w_csci_POR.rda"))
+load(paste0(here(),"/data_output/06_selected_bmi_flow_metrics_w_csci_LAG1.rda"))
+load(paste0(here(),"/data_output/06_selected_bmi_flow_metrics_w_csci_LAG2.rda"))
+load(paste0(here(),"/data_output/03_selected_bmi_and_gages.rda"))
+load(paste0(here(),"/data_output/03_selected_h12_contain_bmi_gage.rda"))
+
+# make component variable
+bmi_RI_combined <- bmi_RI_combined %>% 
+  mutate(flow_component = case_when(
+    grepl("DS_", var) ~ "Dry-season baseflow", #Mag90, Mag10, Tim, Dur_WS, Dur_WSI
+    grepl("SP_", var) ~ "Spring recession flow",
+    grepl("Peak_", var) ~ "Peak flow",
+    grepl("Wet_Tim|Wet_BFL_Mag|Wet_BFL_Dur", var) ~ "Wet-season baseflow",
+    grepl("WSI_Dur|WSI_Mag|WSI_Tim", var) ~ "Fall pulse flow"
+  ))
+  
+
+
+
+```
+
+## Main Questions
+
+This part is most germane to the dataset we currently have (reference flow gages and all BMI data)
+<i>
+
+  -	What is the range/distribution of CSCI/ASCI scores at sites with reference hydrology?
+      -	What functional flow metrics (or components) are most predictive of differences in biology at reference gages?
+
+</i>      
+
+This second part (reference and non-reference) will need to wait until we have non-reference data generated from non-reference gages across the state.
+
+## Data Generation: Pairing Flow and BMI
+
+We used BMI data across the state, over 300,000 samples were available at over 3,000 locations (`Stations`). For flow metric data, we selected *reference* gages from USGS `Sites`.
+
+To pair USGS flow data from a given site with BMI data from a given station, we followed these filtering criteria:
+
+ - Stations and Sites had to exist in the same HUC12
+ - Stations and Sites had to be on the same mainstem streamline within the same HUC12.
+ - Station and Sites had to have overlapping temporal data (data from the same year, or 1-2 years prior).
+
+### Maps of Data
+
+> Data input: 
+
+```{r bmisites, eval=T, echo=F, out.width="50%"}
+knitr::include_graphics(path=paste0(here::here(),"/figs/map_of_bmi_sites.jpg"))
+
+```
+
+```{r usgssites, eval=T, echo=F, out.width="50%"}
+knitr::include_graphics(path=paste0(here::here(),"/figs/map_of_usgs_referenceonly_w_rivers.jpg"))
+
+```
+
+> Potential Site Pairs
+
+```{r potentialsites, eval=T, echo=F, out.width="50%"}
+knitr::include_graphics(path=paste0(here::here(),"/figs/map_of_selected_sites.jpg"))
+
+```
+
+
+## Flow Metrics
+
+The flow metrics calculated for each reference gage (pulled from [eflows](https://eflows.ucdavis.edu/)), and were composed of flow components:
+
+
+```{r flowcomps, eval=T, echo=F, out.width="50%"}
+knitr::include_graphics(path=paste0(here::here(),"/docs/fig2A_ff_components.png"))
+
+```
+
+
+<script>
+function myFunction() {
+    var x = document.getElementById("myDIV");
+    if (x.style.display === "none") {
+        x.style.display = "block";
+    } else {
+        x.style.display = "none";
+    }
+}
+</script>
+ 
+<button onclick="myFunction()">Show/Hide Metrics</button>
+ 
+<div id="myDIV">
+
+**Annual**
+
+  > - Avg annual flow (`Avg`)
+  > - Coefficient of variation (`CV`)
+  > - Standard deviation (`Std`)
+
+**Component: Spring Recession Flow**
+
+  > - Duration (`SP_Dur`)
+  > - Magnitude (`SP_Mag`)
+  > - Rate of change (`SP_ROC`)
+  > - Timing (`SP_Tim`)
+
+**Component: Dry-Season Base Flow**
+
+ > - Duration (`DS_Dur_WS`)
+ > - Timing start of lowflow (`DS_Tim`)
+ > - Magnitude10 percentile (`DS_Mag_10`)
+ > - Magnitude50 percentile (`DS_Mag_50`)
+ > - Timing (`DS_No_Flow`)
+ 
+**Component: Fall Pulse Flow**
+
+ > - Duration (`WSI_Dur`)
+ > - Magnitude (`WSI_Mag`)
+ > - Timing-First fall flush event  (`WSI_Tim`)
+
+**Component: Wet-Season Base Flow**
+
+ > - Timing of start of wet season (`Wet_Tim`)
+ > - Magnitude (`Wet_BFL_Mag`)
+ > - Duration (*Wet_BFL_Dur*)
+ 
+**Component: Peak Flow**
+
+ > - Peak Mag 2 (`Peak_Mag_2`)
+ > - Peak Mag 5 (`Peak_Mag_5`)
+ > - Peak Mag 10 (`Peak_Mag_10`)
+ > - Peak Mag 20 (`Peak_Mag_20`)
+ > - Peak Duration 2 (`Peak_Dur_2`)
+ > - Peak Duration 5 (`Peak_Dur_5`)
+ > - Peak Duration 10 (`Peak_Dur_10`)
+ > - Peak Duration 20 (`Peak_Dur_20`)
+ > - Peak Frequency 2 (`Peak_Fre_2`)
+ > - Peak Frequency 5 (`Peak_Fre_5`)
+ > - Peak Frequency 10 (`Peak_Fre_10`)
+ > - Peak Frequency 20 (`Peak_Fre_20`)
+ > - Peak Timing 2 (`Peak_Tim_2`)
+ > - Peak Timing 5 (`Peak_Tim_5`)
+ > - Peak Timing 10 (`Peak_Tim_10`)
+ > - Peak Timing 20 (`Peak_Tim_20`)
+ 
+ 
+</div>
+ 
+
+### Different Flow Datasets
+
+To assess the BMI station data against flow metrics, we generated metrics (see above) for 4 different datasets:
+
+ - **Annual**: The BMI sampling year matches the Flow Metric Year
+ - **Lag-1** : The flow data is from one year prior to the BMI sample
+ - **Lag-2** : The flow data is from two years prior to the BMI sample
+ - **POR (Period of Record)** : The flow metrics are generated over the entire gage history
+ 
+
+## Stream Classes
+
+The 9-stream classes were as follows:
+
+ - 1=SM (Snowmelt)
+ - 2=HSR (High Snow Rain)
+ - 3=LSR (Low Vol Snow Rain)
+ - 4=WS (Winter Storms)
+ - 5=GW (Groundwater)
+ - 6=PGR (Perennial GW & Rain)
+ - 7=FER (Flashy & Ephemeral)
+ - 8=RGW (Rain seasonal GW)
+ - 9=HLP (High Elev Low Precip)
+
+
+When assessing CSCI scores across the stream classes listed above, there was a wide range of CSCI scores. Furthermore, not all stream classes are represented by the selected BMI/Flow sites. Below are boxplots of **`Stream Class vs. CSCI Percentile`**. The mean CSCI score across all sites is `r mean(bmi_flow_metrics_ann_csci$csci, na.rm = T)`, and the mean CSCI percentile across all sites is `r mean(bmi_flow_metrics_ann_csci$csci_percentile, na.rm = T)`.
+
+If we want to collapse stream classes, we can re-bin based on Noelle's paper, which had 3 main classes:
+
+ - **snowmelt** (Class-1, Class-9)
+ - **mixed** (Class-4, Class-6, Class-7, Class-8)
+ - **rain_driven** (Class-3, Class-5, Class-2)
+
+### CSCI By Stream Class
+
+If we look at the CSCI score (not percentile) by 9 stream classes, we can see there is a significant amount of variability across these classes, and we only have paired gage/BMI sites in 6 of the 9 classes.
+
+```{r boxplots9sc, eval=T}
+
+library(forcats)
+
+# 1=SM (Snowmelt)
+# 2=HSR (High Snow Rain)
+# 3=LSR (Low Vol Snow Rain)
+# 4=WS (Winter Storms)
+# 5=GW (Groundwater)
+# 6=PGR (Perennial GW & Rain)
+# 7=FER (Flashy & Ephemeral)
+# 8=RGW (Rain seasonal GW)
+# 9=HLP (High Elev Low Precip)
+
+# get stream class info:
+
+bmi_flow_metrics_ann_csci$stream_class <-
+factor(bmi_flow_metrics_ann_csci$stream_class,
+       levels = c("Class-1", "Class-3", "Class-4",
+                  "Class-6", "Class-7", "Class-8"))
+
+fct_count(bmi_flow_metrics_ann_csci$stream_class)
+
+# plot CSCI percentile no NAs
+ggplot(data=bmi_flow_metrics_ann_csci, 
+       aes(x=stream_class, y=csci)) + 
+  geom_boxplot(aes(fill=stream_class), show.legend = F, 
+               varwidth = TRUE) +
+  ylab("CSCI (Percentile)") + xlab("Stream Class") +
+  theme_classic(base_family = "Roboto Condensed")
+
+```
+
+When collapsing the data into 3 classes, there still is a signicant range in CSCI across the different classes, but the **mixed** type has the narrowest range of the three, and the highest scores. Note the difference if we plot CSCI percentiles vs. CSCI score.
+
+```{r boxplots3sc, eval=T}
+
+# collapse factors
+bmi_flow_metrics_ann_csci$stream_class_coll <-
+  fct_collapse(bmi_flow_metrics_ann_csci$stream_class,
+               snowmelt=c("Class-1"), # "Class-9",
+               rain_driven=c("Class-4","Class-6","Class-7","Class-8"),
+               mixed = c( "Class-3")) #"Class-5", "Class-2"
+
+fct_count(bmi_flow_metrics_ann_csci$stream_class_coll)
+
+
+# plot CSCI no NAs
+ggplot(data=bmi_flow_metrics_ann_csci, 
+       aes(x=stream_class_coll, y=csci)) + 
+  geom_boxplot(aes(fill=stream_class_coll), show.legend = F, 
+               varwidth = TRUE) +
+labs(y="CSCI", x="Stream Class", subtitle="CSCI Score vs. 3 Stream Classes") +
+  theme_classic(base_family = "Roboto Condensed")
+
+# plot CSCI percentile no NAs
+# ggplot(data=bmi_flow_metrics_ann_csci, 
+#        aes(x=stream_class_coll, y=csci_percentile)) + 
+#   geom_violin(aes(fill=stream_class_coll), show.legend = F, 
+#                varwidth = TRUE, alpha=0.8) +
+#   geom_jitter(width = .2, col="gray20", show.legend = F, alpha=0.8) +
+#   labs(y="CSCI (Percentile)", x="Stream Class", subtitle="CSCI Percentile vs. 3 Stream Classes") +
+#   theme_classic(base_family = "Roboto Condensed")
+
+# plot CSCI percentile no NAs
+ggplot(data=bmi_flow_metrics_ann_csci, 
+       aes(x=stream_class_coll, y=csci_percentile)) + 
+  geom_boxplot(aes(fill=stream_class_coll), varwidth = T, show.legend = F, 
+               alpha=0.8) +
+  geom_jitter(width = .2, col="gray20", show.legend = F, alpha=0.8) +
+  labs(y="CSCI (Percentile)", x="Stream Class", subtitle="CSCI Percentile vs. 3 Stream Classes") +
+  theme_classic(base_family = "Roboto Condensed")
+
+```
+
+## Boosted Regression Tree Analysis
+
+Boosted regression trees (BRTs) generate a *"Relative Importance"* metric which provides a measure of how important a given variable is in describing variance in the response.
+BRTs were run for each flow data set (`annual`, `lag1`, `lag2`, `POR`) which each contained 34 flow metrics, using one of the following BMI metrics (generated via the CSCI package or already existed in datasets) as a response variable:
+
+ - **CSCI Percentile**
+ - **Shannon_Diversity**
+ - **MMI Percentile**
+ - **Intolerant_Percent**
+
+A total of 16 separate BRT modelsets were trained using 24 different model parameters, and the best model was selected. Then relative influence for each flow metric was calculated, and then summarized (see below).
+
+### Relative Influence of Flow Metrics across BMI Metric
+
+```{r ann, echo=F, eval=T, fig.width=7}
+
+# Annual: most common variable?
+bmi_RI_combined %>% group_by(Ymetric, flowdat, var, flow_component) %>% 
+  summarize(meanRI = mean(rel.inf, na.rm = T)) %>% 
+  top_n(3) %>% 
+  arrange(Ymetric, desc(meanRI)) %>% 
+  filter(flowdat=="Annual", !is.na(flow_component), meanRI>2) %>% 
+  #mutate(vars = fct_reorder2(var, flow_component, var)) %>% 
+  ggplot(.) +
+  #geom_col(aes(x=forcats::fct_reorder(var, meanRI), y=meanRI, fill=Ymetric)) +
+  geom_col(aes(x=forcats::fct_reorder2(var, flow_component, var), y=meanRI, fill=Ymetric))+
+           #position="dodge", width = .5) +
+  coord_flip() +
+  scale_fill_viridis_d("BMI Metric") +
+  labs(x="",y="Mean Relative Inf (%)", title = "Annual") +
+  ggdark::dark_theme_bw(base_family = "Roboto Condensed") #+
+  #theme_bw(base_family = "Roboto Condensed") #+
+  #facet_grid(.~flow_component) #scales = "free_y"
+
+# ggsave(filename = "figs/stacked_barplot_RI_by_metric_annual.png", width = 7, height = 6, units = "in", dpi = 200)
+# ggsave(filename = "figs/stacked_barplot_RI_by_metric_annual_dark.png", width = 7, height = 6, units = "in", dpi = 200)
+```
+
+```{r ann_facet, echo=F, eval=T, fig.width=8}
+# Annual: most common variable?
+bmi_RI_combined %>% group_by(Ymetric, flowdat, var, flow_component) %>% 
+  summarize(meanRI = mean(rel.inf, na.rm = T)) %>% 
+  top_n(3) %>% 
+  arrange(Ymetric, desc(meanRI)) %>% 
+  filter(flowdat=="Annual", !is.na(flow_component), meanRI>2) %>% 
+  #mutate(vars = fct_reorder2(var, flow_component, var)) %>% 
+  ggplot(.) +
+  #geom_col(aes(x=forcats::fct_reorder(var, meanRI), y=meanRI, fill=Ymetric)) +
+  geom_col(aes(x=forcats::fct_reorder2(var, flow_component, var), y=meanRI, fill=Ymetric))+
+           #position="dodge", width = .5) +
+  coord_flip() +
+  scale_fill_viridis_d("BMI Metric") +
+  labs(x="",y="Mean Relative Inf (%)", title = "Annual") +
+  ggdark::dark_theme_bw(base_family = "Roboto Condensed") +
+  #theme_bw(base_family = "Roboto Condensed") +
+  facet_grid(.~flow_component) #scales = "free_y"
+  
+
+# ggsave(filename = "figs/stacked_barplot_RI_by_metric_annual_facet_flowcomp_dark.png", width = 9, height = 6, units = "in", dpi = 200)
+# ggsave(filename = "figs/stacked_barplot_RI_by_metric_annual_facet_flowcomp.png", width = 9, height = 6, units = "in", dpi = 200)
+
+```
+
+```{r lag1_facet, echo=F, eval=T, fig.width=8}
+# Lag1: most common variable?
+bmi_RI_combined %>% group_by(Ymetric, flowdat, var, flow_component) %>% 
+  summarize(meanRI = mean(rel.inf, na.rm = T)) %>% 
+  top_n(3) %>% 
+  arrange(Ymetric, desc(meanRI)) %>% 
+  filter(flowdat=="Lag1", !is.na(flow_component), meanRI>2) %>% 
+  ggplot(.) +
+  geom_col(aes(x=forcats::fct_reorder2(var, flow_component, var), y=meanRI, fill=Ymetric))+
+  coord_flip() +
+  scale_fill_viridis_d("BMI Metric") +
+  labs(x="",y="Mean Relative Inf (%)", title = "Lag1") +
+  ggdark::dark_theme_bw(base_family = "Roboto Condensed") +
+  #theme_bw(base_family = "Roboto Condensed") +
+  facet_grid(.~flow_component) #scales = "free_y"
+
+# ggsave(filename = "figs/stacked_barplot_RI_by_metric_lag1.png", width = 7, height = 6, units = "in", dpi = 200)
+# ggsave(filename = "figs/stacked_barplot_RI_by_metric_lag1_facet_flowcomp.png", width = 9, height = 6, units = "in", dpi = 200)
+# 
+# ggsave(filename = "figs/stacked_barplot_RI_by_metric_lag1_dark.png", width = 7, height = 6, units = "in", dpi = 200)
+# ggsave(filename = "figs/stacked_barplot_RI_by_metric_lag1_facet_flowcomp_dark.png", width = 9, height = 6, units = "in", dpi = 200)
+
+```
+
+```{r lag2_facet, echo=F, eval=T, fig.width=8}
+# Lag2: most common variable?
+bmi_RI_combined %>% group_by(Ymetric, flowdat, var, flow_component) %>% 
+  summarize(meanRI = mean(rel.inf, na.rm = T)) %>% 
+  top_n(3) %>% 
+  arrange(Ymetric, desc(meanRI)) %>% 
+  filter(flowdat=="Lag2", !is.na(flow_component), meanRI>2) %>% 
+  ggplot(.) +
+  geom_col(aes(x=forcats::fct_reorder2(var, flow_component, var), y=meanRI, fill=Ymetric))+
+  coord_flip() +
+  scale_fill_viridis_d("BMI Metric") +
+  labs(x="",y="Mean Relative Inf (%)", title = "Lag2") +
+  ggdark::dark_theme_bw(base_family = "Roboto Condensed") +
+  #theme_bw(base_family = "Roboto Condensed") +
+  facet_grid(.~flow_component) #scales = "free_y"
+
+# ggsave(filename = "figs/stacked_barplot_RI_by_metric_lag2.png", width = 7, height = 6, units = "in", dpi = 200)
+# ggsave(filename = "figs/stacked_barplot_RI_by_metric_lag2_facet_flowcomp.png", width = 9, height = 6, units = "in", dpi = 200)
+# 
+# ggsave(filename = "figs/stacked_barplot_RI_by_metric_lag2_dark.png", width = 7, height = 6, units = "in", dpi = 200)
+# ggsave(filename = "figs/stacked_barplot_RI_by_metric_lag2_facet_flowcomp_dark.png", width = 9, height = 6, units = "in", dpi = 200)
+```
+
+```{r por_facet, echo=F, eval=T, fig.width=8}
+# POR most common variable?
+bmi_RI_combined %>% group_by(Ymetric, flowdat, var, flow_component) %>% 
+  summarize(meanRI = mean(rel.inf, na.rm = T)) %>% 
+  top_n(3) %>% 
+  arrange(Ymetric, desc(meanRI)) %>% 
+  filter(flowdat=="POR", !is.na(flow_component), meanRI>2) %>% 
+  ggplot(.) +
+  geom_col(aes(x=forcats::fct_reorder2(var, flow_component, var), y=meanRI, fill=Ymetric))+
+  coord_flip() +
+  scale_fill_viridis_d("BMI Metric") +
+  labs(x="",y="Mean Relative Inf (%)", title = "POR") +
+  ggdark::dark_theme_bw(base_family = "Roboto Condensed") +
+  #theme_bw(base_family = "Roboto Condensed") #+
+  facet_grid(.~flow_component) #scales = "free_y"
+
+# ggsave(filename = "figs/stacked_barplot_RI_by_metric_por.png", width = 7, height = 6, units = "in", dpi = 200)
+# ggsave(filename = "figs/stacked_barplot_RI_by_metric_por_facet_flowcomp.png", width = 9, height = 6, units = "in", dpi = 200)
+# 
+# ggsave(filename = "figs/stacked_barplot_RI_by_metric_por_dark.png", width = 7, height = 6, units = "in", dpi = 200)
+# ggsave(filename = "figs/stacked_barplot_RI_by_metric_por_facet_flowcomp_dark.png", width = 9, height = 6, units = "in", dpi = 200)
+
+```
+
+<!--Select a different flow dataset below to see various plots.-->
+
+```{r flipplots, echo=F, eval=F}
+
+library(stringr)
+#devtools::install_github("walkerke/bsselectR")
+# see here: https://walkerke.github.io/
+library(bsselectR)
+
+bar_plots <- paste0(list.files(path = paste0(here::here(),"/figs"), pattern = "stacked_barplot_RI_by_metric_combined.*_dark.png",  full.names = TRUE))
+names(bar_plots) <- c("Annual", "Lag1", "Lag2", "POR")
+# select only the combined ones
+
+#bar_plots
+bsselect(vector = bar_plots, type = "img", selected = "Annual", 
+         live_search = TRUE, show_tick = TRUE, frame_height = "600",
+         frame_width = "600", 
+         )
+
+```
+
+### Flow Metrics by Flow Dataset and Flow Component
+
+The top 5 flow variables were selected across all possible BMI response metrics (i.e., CSCI, EPT, etc.), and the mean Relative Influence was calculated based on the the various Flow Datasets, and then faceted by flow components.
+
+```{r topFlowVarsFLow}
+
+# most common variable?
+bmi_RI_combined %>% group_by(flowdat, var, flow_component) %>% 
+  summarize(meanRI = mean(rel.inf)) %>% 
+  top_n(5) %>% 
+  arrange(desc(meanRI)) %>% 
+  filter(!is.na(flow_component)) %>% 
+  ggplot(.) +
+  geom_col(aes(x=forcats::fct_reorder2(var, flow_component, var),
+               y=meanRI, fill=flow_component), color="gray20", lwd=.1,
+           position="dodge") +
+  coord_flip() +
+  scale_fill_viridis_d("Flow Data")+
+  labs(x="", y="Mean Relative Inf (%)", subtitle="Top Flow Variables across All BMI Response metrics") +
+  theme_classic(base_family = "Roboto Condensed") +
+  facet_grid(.~flowdat)
+
+```
+
+Interestingly there were shifts between flow components across different datasets, however in all four flow datasets all flow components were represented.
+
+### Top Flow Metrics by Flow Dataset and Component
+
+> The top 5 mean Relative Influence (`meanRI`) metrics for each flow dataset.
+
+```{r topFFMflow, message=F, warning=F}
+
+# most common variable?
+bmi_RI_combined %>% group_by(flowdat, var) %>% 
+  summarize(meanRI = mean(rel.inf)) %>% 
+  top_n(5) %>% 
+  arrange(flowdat, desc(meanRI)) %>% knitr::kable()
+
+```
+
+> The top 5 mean Relative Influence (`meanRI`) metrics for each flow component.
+
+```{r topFFMcomponent}
+
+# most common variable?
+bmi_RI_combined %>% group_by(flow_component, var) %>% 
+  summarize(meanRI = mean(rel.inf)) %>% 
+  top_n(5) %>% 
+  arrange(flow_component, desc(meanRI)) %>% knitr::kable()
+
+```
+
+### Partial Dependence Plots
+
+Based on these results, we can look at the relationship between a given flow metric and BMI response metric. Here's an example for the `MMI_Percentile` data, showing the top 8 variables in the model for the `Annual` and `Lag1` Datasets.
+
+```{r pdpAnnual, eval=T, echo=F, out.width="70%"}
+
+knitr::include_graphics(path=paste0(here(), "/figs/10_gbm_marginal_effects_intolerant_percent_annual.pdf"))
+
+```
+
+
+
+```{r pdpLag1, eval=T, echo=F, out.width="70%"}
+
+knitr::include_graphics(path=paste0(here(), "/figs/10_gbm_marginal_effects_intolerant_percent_lag1.pdf"))
+
+```
+
+And then a **ICE** plot (Individual conditonal expectation) plot (Goldstein et al. 2017). Instead of plotting the average marginal effect on the response variable, ICE plots changes in the predicted response variable for each observation as we vary each predictor variable. An ICE plot visualizes the dependence of the prediction on a feature for each instance separately, resulting in one line per instance, compared to one line overall in partial dependence plots. When the curves have a wide range of intercepts and are consequently “stacked” on each other, heterogeneity in the response variable (from marginal changes in the predictor variable of interest) can be difficult to discern, thus centering can help. These data are centered.
+
+```{r iceAnnual, eval=T, echo=F, out.width="70%"}
+
+knitr::include_graphics(path=paste0(here(), "/figs/pdp_ice_mmi_percentile_Annual_top_var_Wet_Tim.png"))
+
+```
+
+```{r iceLag1, eval=T, echo=F, out.width="70%"}
+
+knitr::include_graphics(path=paste0(here(), "/figs/pdp_ice_mmi_percentile_Lag1_top_var_Peak_Fre_5.png"))
+
+```
+
+
+### Top Flow Metrics across all Data
+
+Here's a list of the top 10 most common flow metrics identified across all the flow datasets, flow components, and bmi response metrics.
+
+```{r top10}
+
+# get just the variable Names for best options:
+bmi_RI_combined %>% group_by(var) %>% 
+  summarize(meanRI = mean(rel.inf)) %>% 
+  top_n(10) %>% arrange(desc(meanRI)) %>% ungroup() %>% distinct(var, .keep_all = T) %>% 
+  knitr::kable()
+
+```
+
+### Full Relative Influence Table
+
+And here is all the data from the BRT models.
+
+```{r}
+library(DT)
+
+DT::datatable(bmi_RI_combined)
+
+```
+
+
+<!--
+```{r staticMap, eval=FALSE, warning=FALSE, message=FALSE}
+
+library(tmap)
+library(USAboundaries)
+
+ca <- USAboundaries::us_states(states="CA")
+
+load(paste0(here(), "/data_output/selected_bmi_flow_metrics_w_csci_ANN.rda"))
+
+bmi_flow_metrics_ann_csci <- bmi_flow_metrics_ann_csci %>% 
+  st_as_sf(coords=c("lon", "lat"), crs=4326, remove=F) %>% 
+  mutate(Peak_Mag_5_log = log(ifelse(is.na(bmi_flow_metrics_ann_csci$Peak_Mag_5), 1, bmi_flow_metrics_ann_csci$Peak_Mag_5)))
+
+pal = RColorBrewer::brewer.pal(name = "RdYlBu", n = 11)
+
+tm_shape(ca) + tm_polygons(alpha=0.5, border.col="gray", lwd=4) +
+tm_shape(bmi_flow_metrics_ann_csci) + 
+  tm_bubbles(shape = 21, col="Peak_Mag_5_log", size=1, palette=viridis::viridis(10), n=10)
+
+
+```
+-->
+
+
+## Leaflet Map of Sites
+
+```{r leafletMap}
+
+library(leaflet)
+library(leaflet.extras)
+
+
+# assign a color
+pal = colorNumeric("RdYlBu", domain = log(ifelse(is.na(bmi_flow_metrics_ann_csci$Peak_Mag_5), 1, bmi_flow_metrics_ann_csci$Peak_Mag_5)))
+
+# Make a leaflet map!
+m <- leaflet(bmi_flow_metrics_ann_csci) %>% addTiles() %>% 
+  addProviderTiles("Stamen.TonerBackground", group = "Stamen Background") %>% 
+  addProviderTiles("Esri.WorldImagery", group = "ESRI Aerial") %>%
+  addProviderTiles("Esri.WorldTopoMap", group = "Topo") %>%
+  
+  # add scale bar
+  addMeasure(position = "topright",
+             primaryLengthUnit = "meters",
+             primaryAreaUnit = "sqmeters",
+             activeColor = "#3D535D",
+             completedColor = "#7D4479") %>%
+  
+  # All BMI sites
+  addCircleMarkers(data=sel_bmi_gages, group="All BMI Stations",
+                   popup=paste0("<strong>","Station: ","</strong>", 
+                                sel_bmi_gages$StationCode, 
+                                "<br><strong>", "Lat: ","</strong>", 
+                                sel_bmi_gages$lat, 
+                                "<br><strong>", "Lon: ","</strong>", 
+                                sel_bmi_gages$lon),
+                   fill = T, stroke=TRUE, weight=.4, color = "gray20", radius=3,
+                   fillOpacity = 0.8, fillColor = "gray") %>% 
+
+  
+  
+  # Selected BMI gages
+  addCircleMarkers(data=bmi_coms, group="Selected BMI Stations",
+                   popup=paste0("<strong>","Station: ","</strong>", 
+                                bmi_coms$StationCode, 
+                                "<br><strong>", "Lat: ","</strong>", 
+                                bmi_coms$lat, 
+                                "<br><strong>", "Lon: ","</strong>", 
+                                bmi_coms$lon,
+                                "<br><strong>", "Site Status: ","</strong>", 
+                                bmi_coms$SiteStatus,
+                                "<br><strong>", "COMID: ","</strong>", 
+                                bmi_coms$comid),
+                   fill = T, stroke=TRUE, weight=.4, radius=5,
+                   fillOpacity = 0.8, fillColor = "orange") %>% 
+  
+  # h12s
+  addPolygons(data=sel_h12_bmi, group="H12s",
+              fill="transparent", stroke=TRUE, weight=.3, fillOpacity = 0.1, opacity=.5, color="darkblue") %>% 
+
+  # flowlines
+  # h12s
+  addPolylines(data=mainstems, group="Mainstems", weight=.6, fillOpacity = 0.1, opacity=.5, color="darkblue") %>% 
+
+    
+  # flow gages
+  addCircleMarkers(data=sel_gages_bmi, group="USGS Gages",
+                   popup=paste0("<strong>","USGS Gage: ","</strong>", 
+                                sel_gages_bmi$ID, 
+                                "<br><strong>", "Lat: ","</strong>", 
+                                sel_gages_bmi$LATITUDE, 
+                                "<br><strong>", "Lon: ","</strong>", 
+                                sel_gages_bmi$LONGITUDE,
+                                "<br><strong>", "Start Yr: ","</strong>", 
+                                sel_gages_bmi$REF_BEGIN_YEAR,
+                                "<br><strong>", "End Yr: ","</strong>", 
+                                sel_gages_bmi$REF_END_YEAR),
+                   fill = T, stroke=TRUE, weight=1, color = "darkblue", radius=4,
+                   fillOpacity = 0.8, fillColor =  "dodgerblue") %>% 
+
+    
+  # # Annual Data by Peak_Mag_5
+  # addCircleMarkers(data=bmi_flow_metrics_ann_csci, group="BMI Coms",
+  #                  lng=~lon, lat=~lat,
+  #                  popup=paste0("<strong>","StationID: ","</strong>", 
+  #                               bmi_coms$StationCode, 
+  #                               "<br><strong>", "Lat: ","</strong>", 
+  #                               bmi_coms$lat, 
+  #                               "<br><strong>", "Lon: ","</strong>", 
+  #                               bmi_coms$lon),
+  #                  stroke=TRUE, weight=0.6,radius=5,
+  #                  fillOpacity = 0.9, col = ~pal(log(bmi_flow_metrics_ann_csci$Peak_Mag_5))) %>% 
+  # 
+  # addLegend(title = "log(Peak_Mag_5)", pal = pal, values = ~log(bmi_flow_metrics_ann_csci$Peak_Mag_5)) %>% 
+  #                  #fillColor= "maroon") %>%  
+  # 
+  
+  
+  
+  addFullscreenControl(position = "topleft", pseudoFullscreen = FALSE) %>% 
+  
+  addLayersControl(
+    baseGroups = c("Stamen Background", "ESRI Aerial", "Topo"),
+    overlayGroups = c("All BMI Stations", "Selected BMI Stations", "USGS Gages", "H12s"),
+    options = layersControlOptions(collapsed=T)
+  )
+
+m
+
+
+```
