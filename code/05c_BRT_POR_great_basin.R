@@ -141,17 +141,18 @@ algaeVar <- quote(MMI.hybrid) # select response var from list above
 
 # 04. Setup POR Data for Model ----------------------------------------------------------------
 head(region_sel)
+region_sel <- separate(region_sel, col = sampledate , into=c("YYYY", "MM", "DD"), remove = F)
 
 names(region_sel)
 # need to select and spread data: 
 data_por <- region_sel %>% st_drop_geometry() %>% 
   dplyr::select(StationID, SampleID_old, HUC_12, ID, comid_ffc, comid_algae,
-                YMD, YYYY, MMI.hybrid, huc_region.x, CEFF_type,
+                sampledate, YYYY, MMI.hybrid, huc_region, CEFF_type,
                 metric, status_code 
   ) %>% 
   # need to spread the metrics wide
   pivot_wider(names_from = metric, values_from = status_code) %>% 
-  mutate(huc_region = as.factor(huc_region.x),
+  mutate(huc_region = as.factor(huc_region),
          CEFF_type = as.factor(CEFF_type)) %>% 
   as.data.frame()
 
@@ -160,7 +161,7 @@ names(data_por) ## remove huc_region - last column - 48 here - giving error in b
 data_por <- data_por[,-36]
 # check how many NAs per col
 #summary(data_por)
-dim(data_por) # 39   36
+dim(data_por) # 23   35
 data_names <- names(data_por)
 data_names
 # remove cols that have more than 70% NA
@@ -172,12 +173,12 @@ names(data_por)
 setdiff(data_names, names(data_por))
 
 # seems SP_Dur is largely NA, only col that was dropped - this dropped the below - eeps!
-# [1] "SP_Dur"      "FA_Dur"      "SP_ROC"      "Peak_Dur_10" "Peak_Dur_2" 
-# [6] "Peak_Dur_5"  "Peak_Fre_10" "Peak_Fre_2"  "Peak_Fre_5"
+# [1] "FA_Dur"      "SP_ROC"      "Peak_Dur_10" "Peak_Dur_2"  "Peak_Dur_5" 
+# [6] "Peak_Fre_10" "Peak_Fre_2"  "Peak_Fre_5"  "SP_Dur" 
 
 # 05. Split Train/Test Data -------------------------------------------------------------------
 
-# make sure data is randomized:
+# # make sure data is randomized:
 random_index <- sample(1:nrow(data_por), nrow(data_por))
 data_por <- data_por[random_index, ]
 
@@ -185,21 +186,21 @@ data_por <- data_por[random_index, ]
 data_por_split <- initial_split(data_por, prop = .9)
 
 # make training dataset
-#data_por_train <- training(data_por_split) %>% 
+#data_por_train <- training(data_por_split) %>%
 data_por_train <- data_por %>% # use all data
   dplyr::select({{algaeVar}}, 12:ncol(.)) %>%  # use 12 if not including HUC region and CEFF_type
   dplyr::filter(!is.na({{algaeVar}})) %>% as.data.frame()
 
 # make testing set
-data_por_test <- testing(data_por_split) %>% 
-  dplyr::select({{algaeVar}}, 12:ncol(.)) %>% 
+data_por_test <- testing(data_por_split) %>%
+  dplyr::select({{algaeVar}}, 12:ncol(.)) %>%
   filter(!is.na({{algaeVar}})) %>% as.data.frame()
 
 # double check cols are what we want
 names(data_por_train)
 
 # 06. GBM.STEP MODEL  ------------------------------------------------------------
-
+# map_lgl(data_por_train, is.double)
 # set up tuning params
 hyper_grid <- expand.grid(
   shrinkage = c(0.001, 0.003, 0.005), 
@@ -209,7 +210,7 @@ hyper_grid <- expand.grid(
 )
 
 # double check and view
-hyper_grid <- hyper_grid[-c(2:3,6,11:12,15,17,18),] ## gbm did not work - data too small
+hyper_grid <- hyper_grid[-c(1:4,5:9,11:12,15,16, 17,18),] ## gbm did not work - data too small
 hyper_grid
 # load the GBM.step function (requires dismo and function loaded)
 gbm_fit_step <- function(
@@ -355,3 +356,4 @@ write_rds(x = get(fileToSave), path = paste0("models/05_",fileToSave, "_model.rd
 
 # Save all the datasets used in the model:
 save(list = ls(pattern="data_"), file = tolower(paste0("models/05_",fileToSave,"_model_data.rda")))
+

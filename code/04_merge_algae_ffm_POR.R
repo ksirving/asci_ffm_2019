@@ -24,7 +24,7 @@ ca_sp_regions <- read_sf("input_data/spatial/umbrella_sp_regions.shp", as_tibble
 
 # nhd streamlines
 load("input_data/07_umbrella_sp_regions.rda") # mainstems_all
-
+load("output_data/02_selected_nhd_mainstems_gages.rda")
 # get all functional flow metric data (percentiles, alt status, ffmetrics)
 load("input_data/02_usgs_all_ffm_data.rda")
 
@@ -54,6 +54,8 @@ sel_algae_coms_final_trimmed <- sel_algae_coms_final %>%
 algae_coms_dat_trim %>% st_drop_geometry() %>% distinct(StationID, ID) %>% dim()
 algae_coms_dat %>% st_drop_geometry() %>% distinct(StationID, ID) %>% dim() # this should be 331
 names(algae_coms_dat)
+names(sel_algae_coms_final)
+
 # join together selected asci data with ffm alteration status data (all data not trimmed)
 algae_asci_por <-  inner_join(sel_algae_coms_final, g_all_alt,
                             #by=c("comid")) #%>% # n=2688
@@ -78,7 +80,7 @@ algae_asci_por_trim <-  inner_join(sel_algae_coms_final_trimmed, g_all_alt,
                                  by=c("gage_id_c"="gage_id")) %>%   # n=7294
   distinct(StationID, metric, gage_id, .keep_all=TRUE) %>% 
   rename(comid_algae = comid.x, comid_ffc = comid.y) # n=6904
-
+names(algae_asci_por_trim)
 # see how many distinct sites
 length(unique(algae_asci_por_trim$gage_id_c)) #Gages (n=146), 
 length(unique(algae_asci_por_trim$StationID)) # algae Stations (n=254), 
@@ -167,26 +169,47 @@ library(leaflet)
 #     addPolygons(data=ca_sp_regions, layerId = ~huc_region, color = "orange") %>%
 #     addCircleMarkers(data = algae_asci_sites, layerId = ~StationID)
 #   )
+# 
 
 ## sites to add to central valley
-cvalley_add <- c("514FC1278", "514RCR001", "534DCC167")
-str(cvalley_add)
+cvalley_add <- c("514FC1278", "514RCR001", "534DCC167", "534PS0114", "514DNCLDC")
+
 ## sites to add to great_basin
-gbasin_add <- c("603MAM004", "630PS0005")
+gbasin_add <- c("603MAM004", "630PS0005", "601PS0065")
 
 ## sites to add to southcoast
-scoast_add <- c("628PS1307","628PS1179","719MISSCK","719TRMDSS","719FCA001")
+scoast_add <- c("628PS1307","628PS1179","719MISSCK","719TRMDSS","719FCA001", "628PS0715", "MJMJ1", "628PS1019")
 
-# Amargosa site is "609PS0053" = mojave?
+## remove gages and sites from visual check
+rem_sites <- read.csv("input_data/sites_to_remove.csv")
+rem_sites <- rem_sites$sample_site
+rem_gages <- read.csv("input_data/gages_to_remove.csv")
+rem_gages <- rem_gages$Gage
 
-# so 294 NA's in each
+head(algae_asci_por_trim)
+unique(algae_asci_por_trim$StationID)
+
+
+algae_asci_por_trim <- algae_asci_por_trim %>%
+  filter(!StationID %in% rem_sites,
+         !gage_id %in% rem_gages)
+
+#removed 817 rows (12%)
+
+algae_asci_por <- algae_asci_por %>%
+  filter(!StationID %in% rem_sites,
+         !gage_id %in% rem_gages)
+
+#removed 817 rows (11%)
+
+# so 341 NA's in each
 summary(as.factor(algae_asci_por$huc_region))
 summary(as.factor(algae_asci_por_trim$huc_region))
 
 algae_asci_por_trim$huc_region <- as.character(algae_asci_por_trim$huc_region)
 algae_asci_por$huc_region <- as.character(algae_asci_por$huc_region)
 
-# use case_when to replace
+# # use case_when to replace
 algae_asci_por_trim <- algae_asci_por_trim %>%
   mutate(huc_region = case_when(
     StationID %in% cvalley_add ~ "central_valley",
@@ -201,7 +224,7 @@ algae_asci_por <- algae_asci_por %>%
     StationID %in% scoast_add ~ "south_coast",
     TRUE ~ huc_region))
 
-# only NAs are now for AMARGOSA site
+# no NAs!!!! Yay1
 summary(as.factor(algae_asci_por_trim$huc_region))
 table(algae_asci_por_trim$huc_region)
 

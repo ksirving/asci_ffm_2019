@@ -33,8 +33,8 @@ algae$Longitude <- as.numeric(as.character(algae$Longitude))
 algae <- na.omit(algae)
 
 ## make df with just sites and coords for slage sites
-
-algae_stations_distinct <- algae
+algae
+algae_stations_distinct <- algae[,c(1:2,4:5)]
 algae_stations_distinct<- algae_stations_distinct[!duplicated(algae_stations_distinct$StationID), ]
 dim(algae_stations_distinct) ## 1688
 head(algae_stations_distinct)
@@ -71,21 +71,21 @@ algae_h12 <- st_join(algae_stations_distinct, left = TRUE, h12[c("HUC_12")])
 head(algae_h12)
 head(h12)
 
-
 # Add H12 to all gages
 gages_h12 <- st_join(gages_all_filt, left=TRUE, h12[c("HUC_12")]) %>%
   st_drop_geometry()
-
+gages_h12
 # now join based on H12: what algae stations share same H12 as USGS gage? (N=1000)
 sel_algae_gages <- inner_join(algae_h12, gages_h12, by="HUC_12") %>% 
   distinct(StationID, ID, .keep_all = T) # n=1000
-
+sel_algae_gages
 # number of unique?
 length(unique(factor(sel_algae_gages$HUC_12))) # h12=153
 length(unique(sel_algae_gages$ID)) # gages=189
 length(unique(sel_algae_gages$StationID)) # algae Stations=422
 
-
+sel_algae_gages
+algae_stations_distinct
 ## already have this - sel_algae_gages (algae sites, asci values, gage and huc12 data)
 # # make sure these have ASCI scores: of those in same H12, how many have asci scores? N=552
 sel_algae_gages_asci <- left_join(sel_algae_gages, st_drop_geometry(algae_stations_distinct), by="StationID") %>%
@@ -228,12 +228,12 @@ names(sel_algae_gages)
   # sel_gages_algae <- st_transform(sel_gages_algae, crs=3310)
   # 
   # # get the COMID for each gage in list
-  # usgs_segs <- sel_gages_algae %>% split(.$site_id) %>%
+  # usgs_segs <- sel_gages_algae %>% split(.$StationID) %>%
   #   map(~discover_nhdplus_id(.x$geometry))
   # 
   # # now have a list of all the missing COMIDs, check for dups
-  # usgs_segs %>% 
-  #   purrr::map_lgl(~ length(.x)>1) %>% 
+  # usgs_segs %>%
+  #   purrr::map_lgl(~ length(.x)>1) %>%
   #   #table() # 3 are FALSE
   #   .[.==TRUE] # get values that are TRUE
   # 
@@ -246,7 +246,7 @@ names(sel_algae_gages)
   # usgs_segs["11404240"] <- 2775510
   # 
   # # double check again:
-  # usgs_segs %>% 
+  # usgs_segs %>%
   #   purrr::map_lgl(~ length(.x)>1) %>% table() # all FALSE
   # 
   # save the USGS station COMIDs file:
@@ -466,29 +466,29 @@ names(sel_algae_gages)
   ## ID = T11087020 (7 sites over 15km downstream)
   ## StationCode = 403FCA038, 403STC019
   
-  # do the thing:
-  sel_algae_coms_final_v2 <- st_drop_geometry(sel_algae_coms_final) %>% bind_rows(
-    # original final dataset (keep)
-    .,
-    # update with these records (n=13)
-    filter(st_drop_geometry(sel_algae_gages_asci), 
-           StationCode %in% c("309SET", "902MCGSxx", "901M14134","801RB8483", 
-                              "801RB8396", "SMCR8_327", "SGUR010",  "553WER224",
-                              # the maybes
-                              "609PS0053", "535CR0910"))
-  ) %>% 
-    # now filter out the stuff we don't want (n=21)
-    filter(!StationCode %in% c("801RB8593", "412LARSCO", "LALT501", "901ATCTCx", "901TCSMP1",
-                               "403FCA038", "403STC019"), 
-           !ID %in% c("T11087020")) 
-  
+  # # do the thing:
+  # sel_algae_coms_final_v2 <- st_drop_geometry(sel_algae_coms_final) %>% bind_rows(
+  #   # original final dataset (keep)
+  #   .,
+  #   # update with these records (n=13)
+  #   filter(st_drop_geometry(sel_algae_gages_asci), 
+  #          StationCode %in% c("309SET", "902MCGSxx", "901M14134","801RB8483", 
+  #                             "801RB8396", "SMCR8_327", "SGUR010",  "553WER224",
+  #                             # the maybes
+  #                             "609PS0053", "535CR0910"))
+  # ) %>% 
+  #   # now filter out the stuff we don't want (n=21)
+  #   filter(!StationCode %in% c("801RB8593", "412LARSCO", "LALT501", "901ATCTCx", "901TCSMP1",
+  #                              "403FCA038", "403STC019"), 
+  #          !ID %in% c("T11087020")) 
+  # 
   # re-make the geom
-  sel_algae_coms_final_v2 <- st_as_sf(sel_algae_coms_final_v2, coords=c("longitude", "latitude"), crs=4326, remove=FALSE)
+  sel_algae_coms_final_v2 <- st_as_sf(sel_algae_coms_final, coords=c("longitude", "latitude"), crs=4326, remove=FALSE)
   
   ### MAP AGAIN
   
   # not selected algae
-  algae_not_selected_v2 <- sel_algae_gages_asci %>% filter(!as.character(StationCode) %in% sel_algae_coms_final_v2$StationCode) # n=203
+  algae_not_selected_v2 <- sel_algae_gages_asci %>% filter(!as.character(StationID) %in% sel_algae_coms_final_v2$StationID) # n=203
   
   # get all gages selected (n=160)
   gages_selected_v2 <- sel_gages_algae %>% 

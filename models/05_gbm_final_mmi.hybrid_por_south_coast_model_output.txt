@@ -4,60 +4,49 @@
  
 Performing cross-validation optimisation of a boosted regression tree model 
 for MMI.hybrid and using a family of gaussian 
-Using 182 observations and 23 predictors 
+Using 167 observations and 23 predictors 
 creating 10 initial models of 100 trees 
 
  folds are unstratified 
 total mean deviance =  0.035 
 tolerance is fixed at  0 
 ntrees resid. dev. 
-100    0.0321 
+100    0.0319 
 now adding trees... 
-200   0.0302 
-300   0.0289 
-400   0.0281 
-500   0.0274 
-600   0.027 
-700   0.0266 
-800   0.0263 
-900   0.0261 
-1000   0.026 
-1100   0.0259 
-1200   0.0258 
-1300   0.0257 
-1400   0.0257 
-1500   0.0256 
-1600   0.0256 
-1700   0.0256 
-1800   0.0255 
-1900   0.0254 
-2000   0.0254 
-2100   0.0254 
-2200   0.0254 
-2300   0.0254 
-2400   0.0254 
-2500   0.0255 
-2600   0.0254 
-2700   0.0255 
-2800   0.0254 
-2900   0.0255 
-3000   0.0254 
-3100   0.0255 
-3200   0.0254 
-3300   0.0254 
-3400   0.0255 
+200   0.0297 
+300   0.0286 
+400   0.028 
+500   0.0275 
+600   0.0272 
+700   0.027 
+800   0.0269 
+900   0.0269 
+1000   0.0269 
+1100   0.027 
+1200   0.027 
+1300   0.027 
+1400   0.027 
+1500   0.0271 
+1600   0.0271 
+1700   0.0271 
+1800   0.0271 
+1900   0.0272 
+2000   0.0272 
+2100   0.0272 
+2200   0.0273 
+2300   0.0272 
 
 mean total deviance = 0.035 
-mean residual deviance = 0.017 
+mean residual deviance = 0.019 
  
-estimated cv deviance = 0.025 ; se = 0.003 
+estimated cv deviance = 0.027 ; se = 0.002 
  
-training data correlation = 0.718 
-cv correlation =  0.547 ; se = 0.065 
+training data correlation = 0.697 
+cv correlation =  0.545 ; se = 0.05 
  
-elapsed time -  0.15 minutes 
+elapsed time -  0.08 minutes 
 
 Best parameters for GBM.STEP:
 
 shrinkage	interaction.depth	n.minobsinnode	bag.fraction	dev_explained
-0.003	5	3	0.8	0.2732734905318727
+0.005	5	3	0.75	0.23080271612569417

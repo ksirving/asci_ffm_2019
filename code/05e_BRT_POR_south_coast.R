@@ -141,17 +141,18 @@ algaeVar <- quote(MMI.hybrid) # select response var from list above
 
 # 04. Setup POR Data for Model ----------------------------------------------------------------
 head(region_sel)
+region_sel <- separate(region_sel, col = sampledate , into=c("YYYY", "MM", "DD"), remove = F)
 
 names(region_sel)
 # need to select and spread data: 
 data_por <- region_sel %>% st_drop_geometry() %>% 
   dplyr::select(StationID, SampleID_old, HUC_12, ID, comid_ffc, comid_algae,
-                YMD, YYYY, MMI.hybrid, huc_region.x, CEFF_type,
+                sampledate, YYYY, MMI.hybrid, huc_region, CEFF_type,
                 metric, status_code 
   ) %>% 
   # need to spread the metrics wide
   pivot_wider(names_from = metric, values_from = status_code) %>% 
-  mutate(huc_region = as.factor(huc_region.x),
+  mutate(huc_region = as.factor(huc_region),
          CEFF_type = as.factor(CEFF_type)) %>% 
   as.data.frame()
 
@@ -160,7 +161,7 @@ names(data_por) ## remove huc_region - last column - 48 here - giving error in b
 data_por <- data_por[,-36]
 # check how many NAs per col
 #summary(data_por)
-dim(data_por) # 39   36
+dim(data_por) # 167   36
 data_names <- names(data_por)
 data_names
 # remove cols that have more than 70% NA
@@ -353,3 +354,4 @@ write_rds(x = get(fileToSave), path = paste0("models/05_",fileToSave, "_model.rd
 
 # Save all the datasets used in the model:
 save(list = ls(pattern="data_"), file = tolower(paste0("models/05_",fileToSave,"_model_data.rda")))
+

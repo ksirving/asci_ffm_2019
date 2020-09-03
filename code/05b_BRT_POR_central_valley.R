@@ -141,23 +141,24 @@ algaeVar <- quote(MMI.hybrid) # select response var from list above
 
 # 04. Setup POR Data for Model ----------------------------------------------------------------
 head(region_sel)
+region_sel <- separate(region_sel, col = sampledate , into=c("YYYY", "MM", "DD"), remove = F)
 
 names(region_sel)
 # need to select and spread data: 
 data_por <- region_sel %>% st_drop_geometry() %>% 
   dplyr::select(StationID, SampleID_old, HUC_12, ID, comid_ffc, comid_algae,
-                YMD, YYYY, MMI.hybrid, huc_region.x, CEFF_type,
+                sampledate, YYYY, MMI.hybrid, huc_region, CEFF_type,
                 metric, status_code 
   ) %>% 
   # need to spread the metrics wide
   pivot_wider(names_from = metric, values_from = status_code) %>% 
-  mutate(huc_region = as.factor(huc_region.x),
+  mutate(huc_region = as.factor(huc_region),
          CEFF_type = as.factor(CEFF_type)) %>% 
   as.data.frame()
 
 # check how many NAs per col
 #summary(data_por)
-dim(data_por) 30   36
+dim(data_por) #33   35
 data_names <- names(data_por)
 
 # remove cols that have more than 70% NA
@@ -165,7 +166,7 @@ data_por <- data_por[, which(colMeans(!is.na(data_por)) > 0.7)]
 dim(data_por)
 
 # find the cols that have been dropped
-setdiff(data_names, names(data_por))
+setdiff(data_names, names(data_por_train))
 
 # seems SP_Dur is largely NA, only col that was dropped - yep!
 
@@ -203,7 +204,7 @@ hyper_grid <- expand.grid(
 )
 
 # double check and view
-hyper_grid <- hyper_grid[-c(7:18),] ## gbm did not work - data too small
+hyper_grid <- hyper_grid[-c(8:18),] ## gbm did not work - data too small
 hyper_grid
 # load the GBM.step function (requires dismo and function loaded)
 gbm_fit_step <- function(

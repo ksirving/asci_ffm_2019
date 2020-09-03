@@ -82,7 +82,7 @@ data_por <- region_sel %>% st_drop_geometry() %>%
   as.data.frame()
 
 # check how many NAs per col
-dim(data_por)
+dim(data_por) ## 270
 data_names <- names(data_por) # save colnames out
 
 # remove cols that have more than 70% NA
@@ -96,7 +96,7 @@ setdiff(data_names, names(data_por))
 
 # 05. Split Train/Test Data -------------------------------------------------------------------
 
-# make sure data is randomized:
+# # make sure data is randomized:
 random_index <- sample(1:nrow(data_por), nrow(data_por))
 data_por <- data_por[random_index, ]
 
@@ -104,18 +104,18 @@ data_por <- data_por[random_index, ]
 data_por_split <- initial_split(data_por, prop = .9)
 
 # make training dataset
-#data_por_train <- training(data_por_split) %>% 
+#data_por_train <- training(data_por_split) %>%
 data_por_train <- data_por %>% # use all data
   dplyr::select({{algaeVar}}, 12:ncol(.)) %>%  # use 12 if not including HUC region and CEFF_type
   dplyr::filter(!is.na({{algaeVar}})) %>% as.data.frame()
 
 # make testing set
-data_por_test <- testing(data_por_split) %>% 
-  dplyr::select({{algaeVar}}, 12:ncol(.)) %>% 
+data_por_test <- testing(data_por_split) %>%
+  dplyr::select({{algaeVar}}, 12:ncol(.)) %>%
   filter(!is.na({{algaeVar}})) %>% as.data.frame()
 
 # double check cols are what we want
-names(data_por_train)
+# names(data_por_train)
 
 # 06. GBM.STEP MODEL  ------------------------------------------------------------
 
