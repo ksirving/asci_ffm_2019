@@ -3,13 +3,6 @@
  GBM STEP - version 2.9 
  
 Performing cross-validation optimisation of a boosted regression tree model 
-for StationID and using a family of gaussian 
-Using 270 observations and 33 predictors 
-
- 
- GBM STEP - version 2.9 
- 
-Performing cross-validation optimisation of a boosted regression tree model 
 for MMI.hybrid and using a family of gaussian 
 Using 270 observations and 23 predictors 
 creating 10 initial models of 100 trees 
@@ -67,7 +60,7 @@ estimated cv deviance = 0.029 ; se = 0.002
 training data correlation = 0.788 
 cv correlation =  0.495 ; se = 0.05 
  
-elapsed time -  0.21 minutes 
+elapsed time -  0.22 minutes 
 
 Best parameters for GBM.STEP:
 

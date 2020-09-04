@@ -196,7 +196,7 @@ hyper_grid <- expand.grid(
 )
 
 # double check and view
-hyper_grid <- hyper_grid[-c(1:2),] ## gbm did not work - data too small
+hyper_grid <- hyper_grid[-c(1:6),] ## gbm did not work - data too small
 hyper_grid
 # load the GBM.step function (requires dismo and function loaded)
 gbm_fit_step <- function(

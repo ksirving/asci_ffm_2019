@@ -166,7 +166,7 @@ data_por <- data_por[, which(colMeans(!is.na(data_por)) > 0.7)]
 dim(data_por)
 
 # find the cols that have been dropped
-setdiff(data_names, names(data_por_train))
+setdiff(data_names, names(data_por))
 
 # seems SP_Dur is largely NA, only col that was dropped - yep!
 

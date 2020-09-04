@@ -22,7 +22,7 @@ plotname <- "All Site Pairs"  #"Central Valley" #"All Site Pairs"
 
 ## ONLY IF YOU NEED MODEL NAMES/DATA
 ## "all_ca_ffc_only", "central_valley", "great_basin", "north_coast", "south_coast", 
-modname <- "all_ca_ffc_only" # model name 
+modname <- "south_coast" # model name 
 algaeVar <- quote(MMI.hybrid) # select response var
 # make pathnames
 (plot_savename <- tolower(paste0("07_gbm_", as_name(algaeVar), "_",hydroDat, "_",modname)))
@@ -30,37 +30,37 @@ algaeVar <- quote(MMI.hybrid) # select response var
 # make regional Ri --------------------------------------------------------
 
 ## ONLY IF YOU NEED MODEL NAMES/DATA
-## "all_ca_ffc_only", "central_valley", "great_basin", "north_coast", "south_coast", 
-# modname <- "south_coast" # model name
-# algaeVar <- quote(MMI.hybrid) # select response var
-# 
-# # make pathnames
-# (mod_savename <- tolower(paste0("05_gbm_", as_name(algaeVar), "_",hydroDat, "_",modname)))
-# 
-# # get the gbm model:
-# (top_ri <- list.files(path="models/", pattern = paste0("^", mod_savename,"_RI_combined",".*\\.rds$")))
-# top_ris <- read_rds(path=paste0("models/", top_ri))
-# top_ris
-# 
-# # make sep and combine
-# ri_all_ca <- top_ris %>% mutate(model="all_ca")
-# ri_cvalley <- top_ris %>% mutate(model="central_valley")
-# ri_gbasin <- top_ris %>% mutate(model="great_basin")
-# ri_ncoast <- top_ris %>% mutate(model="north_coast")
-# ri_scoast <- top_ris %>% mutate(model="south_coast")
-# 
-# str(ri_all_ca)
-# ri_cvalley
-# ri_gbasin
-# ri_ncoast
-# ri_scoast
-# 
-# # # bind
-# ri_all_regions <- bind_rows(ri_all_ca, ri_gbasin, ri_cvalley, ri_ncoast, ri_scoast)
-# head(ri_all_regions)
-# unique(ri_all_regions$model)
-# # #save out for later
-# save(ri_all_regions, file = "models/07_all_ri_all_regions_asci.rda")
+# "all_ca_ffc_only", "central_valley", "great_basin", "north_coast", "south_coast",
+modname <- "south_coast" # model name
+algaeVar <- quote(MMI.hybrid) # select response var
+
+# make pathnames
+(mod_savename <- tolower(paste0("05_gbm_", as_name(algaeVar), "_",hydroDat, "_",modname)))
+
+# get the gbm model:
+(top_ri <- list.files(path="models/", pattern = paste0("^", mod_savename,"_RI_combined",".*\\.rds$")))
+top_ris <- read_rds(path=paste0("models/", top_ri))
+top_ris
+
+# make sep and combine
+ri_all_ca <- top_ris %>% mutate(model="all_ca")
+ri_cvalley <- top_ris %>% mutate(model="central_valley")
+ri_gbasin <- top_ris %>% mutate(model="great_basin")
+ri_ncoast <- top_ris %>% mutate(model="north_coast")
+ri_scoast <- top_ris %>% mutate(model="south_coast")
+
+str(ri_all_ca)
+ri_cvalley
+ri_gbasin
+ri_ncoast
+ri_scoast
+
+# # bind
+ri_all_regions <- bind_rows(ri_all_ca, ri_gbasin, ri_cvalley, ri_ncoast, ri_scoast)
+head(ri_all_regions)
+unique(ri_all_regions$model)
+# #save out for later
+save(ri_all_regions, file = "models/07_all_ri_all_regions_asci.rda")
 
 
 # Make a Table of RI's ----------------------------------------------------
@@ -262,14 +262,14 @@ ggsave(filename=tolower(paste0("models/", plot_savename2, "_all_regions_ri_point
 
 
 
-#ggsave(filename = "figs/09_faceted_RI_by_flowcomp_hydrodat.png", width = 9, height = 6, units = "in", dpi = 300)
-
-# Faceted by algae metrics and flow components:
-# ri_table %>% group_by(flowdat, var, Ymetric, flow_component) %>% 
-#   summarize(meanRI = mean(RI)) %>% 
-#   #top_n(6) %>% 
-#   arrange(desc(meanRI)) %>% 
-#   filter(flow_component!="General", flowdat=="Annual") %>%  
+# ggsave(filename = "figs/09_faceted_RI_by_flowcomp_hydrodat.png", width = 9, height = 6, units = "in", dpi = 300)
+# 
+# # Faceted by algae metrics and flow components:
+# ri_table %>% group_by(flowdat, var, Ymetric, flow_component) %>%
+#   summarize(meanRI = mean(RI)) %>%
+#   #top_n(6) %>%
+#   arrange(desc(meanRI)) %>%
+#   filter(flow_component!="General", flowdat=="Annual") %>%
 #   ggplot(.) +
 #   geom_col(aes(x=var, y=meanRI, fill=flow_component), color="gray20", lwd=.1, position="dodge") +
 #   coord_flip() +
@@ -281,11 +281,11 @@ ggsave(filename=tolower(paste0("models/", plot_savename2, "_all_regions_ri_point
 # ggsave(filename = "figs/faceted_RI_by_flowcomp_algae_ANNUAL.png", width = 9, height = 6, units = "in", dpi = 300)
 
 # Faceted by algae metrics and flow components:
-# ri_table %>% group_by(flowdat, var, Ymetric, flow_component) %>% 
-#   summarize(meanRI = mean(RI)) %>% 
-#  # top_n(6) %>% 
-#   arrange(desc(meanRI)) %>% 
-#   filter(flow_component!="General", flowdat=="Lag1") %>%  
+# ri_table %>% group_by(flowdat, var, Ymetric, flow_component) %>%
+#   summarize(meanRI = mean(RI)) %>%
+#  # top_n(6) %>%
+#   arrange(desc(meanRI)) %>%
+#   filter(flow_component!="General", flowdat=="Lag1") %>%
 #   ggplot(.) +
 #   geom_col(aes(x=var, y=meanRI, fill=flow_component), color="gray20", lwd=.1, position="dodge") +
 #   coord_flip() +
@@ -293,15 +293,15 @@ ggsave(filename=tolower(paste0("models/", plot_savename2, "_all_regions_ri_point
 #   labs(x="", y="Mean Relative Inf (%)", subtitle="LAG-1: Top Flow Metrics across algae Metrics") +
 #   theme_classic(base_family = "Roboto Condensed") +
 #   facet_grid(.~Ymetric)
-# 
+#
 # ggsave(filename = "figs/faceted_RI_by_flowcomp_algae_LAG1.png", width = 9, height = 6, units = "in", dpi = 300)
-#   
+#
 # # Faceted by algae metrics and flow components:
-# ri_table %>% group_by(flowdat, var, Ymetric, flow_component) %>% 
-#   summarize(meanRI = mean(RI)) %>% 
-#   # top_n(6) %>% 
-#   arrange(desc(meanRI)) %>% 
-#   filter(flow_component!="General", flowdat=="Lag2") %>%  
+# ri_table %>% group_by(flowdat, var, Ymetric, flow_component) %>%
+#   summarize(meanRI = mean(RI)) %>%
+#   # top_n(6) %>%
+#   arrange(desc(meanRI)) %>%
+#   filter(flow_component!="General", flowdat=="Lag2") %>%
 #   ggplot(.) +
 #   geom_col(aes(x=var, y=meanRI, fill=flow_component), color="gray20", lwd=.1, position="dodge") +
 #   coord_flip() +
@@ -309,7 +309,7 @@ ggsave(filename=tolower(paste0("models/", plot_savename2, "_all_regions_ri_point
 #   labs(x="", y="Mean Relative Inf (%)", subtitle="LAG-2: Top Flow Metrics across algae Metrics") +
 #   theme_classic(base_family = "Roboto Condensed") +
 #   facet_grid(.~Ymetric)
-# 
+#
 # ggsave(filename = "figs/faceted_RI_by_flowcomp_algae_LAG2.png", width = 9, height = 6, units = "in", dpi = 300)
-# 
-# 
+#
+#
