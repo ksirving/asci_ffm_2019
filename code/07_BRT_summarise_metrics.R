@@ -18,7 +18,7 @@ load("output_data/04_selected_algae_asci_por_w_huc_region.rda")
 names(algae_asci_por_trim)
 # load("models/07_all_ri_all_regions_asci.rda")
 hydroDat <- "POR"
-plotname <- "All Site Pairs"  #"Central Valley" #"All Site Pairs"
+plotname <- "All Site Pairs (POR)"  #"Central Valley" #"All Site Pairs"
 
 ## ONLY IF YOU NEED MODEL NAMES/DATA
 ## "all_ca_ffc_only", "central_valley", "great_basin", "north_coast", "south_coast", 
@@ -239,7 +239,7 @@ ri_table %>%
   scale_size_binned("", guide=FALSE, range=c(0.5, 6.5)) +
   coord_flip() +
   ylim(c(0,30))+
-  labs(subtitle = "asci Models",
+  labs(subtitle = "ASCI Models (POR)",
        x="", y="Relative Influence (%)") +
   #theme_bw(base_family = "Roboto Condensed")
   theme_minimal(base_family = "Roboto Condensed") +

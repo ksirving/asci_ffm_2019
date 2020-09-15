@@ -8,6 +8,17 @@ library(mapview)
 library(janitor)
 library(lubridate)
 library(raster)
+library(dplyr)
+library(tidyr)
+
+library(CSCI)
+library(reshape)
+library(reshape2)
+# install.packages("reshape")
+library(ggplot2)
+library(lubridate)
+library(tidyr)
+library(dplyr)
 
 #  statewide study - asci - ffm
 
@@ -17,6 +28,20 @@ setwd("/Users/katieirving/Documents/git/asci_ffm_2019")
 
 comp_scor <- read.csv("input_data/algae_comp_mets_mmi_jan2020.csv")
 asci_scor <- read.csv("input_data/asci.scores_dec2019.csv", header=T)
+
+asci_scor <- read.csv("input_data/ASCI.1.csv")
+head(asci_scor)
+# algae<- as_tibble(algae)
+
+asci_scor <- asci_scor %>% 
+  select(sampleid, stationcode, sampledate,replicate, assemblage, metric, result) %>%
+  filter(metric == "ASCI", !assemblage == "SBA") %>%
+  rename(StationCode = stationcode, SampleID = sampleid, SampleDate = sampledate, Result = result) %>%
+  mutate(Index = ifelse(assemblage == "Hybrid", "H_ASCI", "D_ASCI")) %>%
+  select(-assemblage, -metric)
+
+head(algae)
+
 head(asci_scor)
 head(comp_scor)
 dim(asci_scor) # 2588

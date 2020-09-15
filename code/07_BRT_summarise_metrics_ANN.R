@@ -19,11 +19,11 @@ load("output_data/04a_selected_algae_asci_ffm_ann.rda")
 names(algae_asci_ffm_ann_trim)
 # load("models/07_all_ri_all_regions_asci.rda")
 hydroDat <- "ANN"
-plotname <- "All Site Pairs"  #"Central Valley" #"All Site Pairs"
+plotname <- "All Site Pairs (POR)"  #"Central Valley" #"All Site Pairs"
 
 ## ONLY IF YOU NEED MODEL NAMES/DATA
 ## "all_ca_ffc_only", "central_valley", "great_basin", "north_coast", "south_coast", 
-modname <- "central_valley" # model name 
+modname <- "all_ca_ffc_only" # model name 
 algaeVar <- quote(MMI.hybrid) # select response var
 # make pathnames
 (plot_savename <- tolower(paste0("07_gbm_", as_name(algaeVar), "_",hydroDat, "_",modname)))
@@ -32,7 +32,7 @@ algaeVar <- quote(MMI.hybrid) # select response var
 
 ## ONLY IF YOU NEED MODEL NAMES/DATA
 # "all_ca_ffc_only", "central_valley", "great_basin", "north_coast", "south_coast",
-modname <- "central_valley" # model name
+modname <- "south_coast" # model name
 algaeVar <- quote(MMI.hybrid) # select response var
 
 # make pathnames
@@ -63,12 +63,12 @@ ri_all_regions <- bind_rows(ri_all_ca, ri_gbasin, ri_cvalley, ri_ncoast, ri_scoa
 head(ri_all_regions)
 unique(ri_all_regions$model)
 # #save out for later
-save(ri_all_regions, file = "models/07_all_ri_all_regions_asci.rda")
+save(ri_all_regions, file = "models/07_all_ri_all_regions_asci_ann.rda")
 
 
 # Make a Table of RI's ----------------------------------------------------
 
-load(file="models/07_all_ri_all_regions_asci.rda")
+load(file="models/07_all_ri_all_regions_asci_ann.rda")
 library(readxl)
 ff_defs <- readxl::read_xlsx("docs/Functional_Flow_Metrics_List_and_Definitions_final.xlsx", range = "A1:F25", .name_repair = "universal", trim_ws = TRUE) 
 
@@ -242,7 +242,7 @@ ri_table %>%
   scale_size_binned("", guide=FALSE, range=c(0.5, 6.5)) +
   coord_flip() +
   ylim(c(0,30))+
-  labs(subtitle = "asci Models",
+  labs(subtitle = "ASCI Models (ANN)",
        x="", y="Relative Influence (%)") +
   #theme_bw(base_family = "Roboto Condensed")
   theme_minimal(base_family = "Roboto Condensed") +
@@ -253,7 +253,7 @@ ri_table %>%
 #facet_grid(cols = vars(model), labeller = labeller(model=c("central_valley"="Central Valley", "great_basin"="Great Basin", "north_coast"="N. Coast", "south_coast"="S. Coast")))
 
 # save out
-plot_savename2 <- "07_gbm_asci_por_regional"
+plot_savename2 <- "07_gbm_asci_ann_regional"
 ggsave(filename=tolower(paste0("models/", plot_savename2, "_ri_points_w_lines_ranked.png")), width = 9, height = 7, units = "in", dpi = 300)
 
 
