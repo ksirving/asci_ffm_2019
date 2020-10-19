@@ -33,7 +33,11 @@ load("output_data/02_selected_nhd_mainstems_gages.rda") # mainstems_all
 ca_sp_regions <- read_sf("input_data/spatial/umbrella_sp_regions.shp", as_tibble = T) %>% st_transform(4326)
 
 # load updated data w HUC_regions:
-load("output_data/04_selected_algae_asci_por_trim_w_huc_region.rda")
+# load("output_data/04_selected_algae_asci_por_trim_w_huc_region.rda")
+
+load(file="output_data/05_selected_algae_ascii_por_trim2.rda") ## algae_asci_por_trim2
+load(file= "output_data/05_selected_algae_ascii_por2.rda") ## algae_asci_por2
+
 
 # set background basemaps/default options:
 basemapsList <- c("Esri.WorldTopoMap", "Esri.WorldImagery","Esri.NatGeoWorldMap",
@@ -77,7 +81,7 @@ mapviewOptions(homebutton = FALSE, basemaps=basemapsList, viewer.suppress = FALS
 #     addTiles() %>%
 #     addPolygons(data=ca_sp_regions, layerId = ~huc_region, color = "orange") %>%
 #     addCircleMarkers(data = algae_asci_sites, layerId = ~StationID)
-# )
+#   )
 # 
 # ## sites to add to central valley
 # cvalley_add <- c("514FC1278", "514RCR001", "534DCC167")
@@ -115,7 +119,7 @@ mapviewOptions(homebutton = FALSE, basemaps=basemapsList, viewer.suppress = FALS
 # 02. Select a Region ---------------------------------------------------------
 
 # make a simpler layer for mapping
-algae_asci_sites <- algae_asci_por_trim %>% 
+algae_asci_sites <- algae_asci_por_trim2 %>% 
   dplyr::distinct(StationID, ID, .keep_all = TRUE)
 
 # if selecting by a specific region use region select
@@ -126,18 +130,17 @@ modname <- "south_coast"   # or "all_ca_ffc_only"
 Hregions <- c(modname) # set a region or regions
 
 # now filter data to region(s) of interest
-region_sel <- algae_asci_por_trim %>% filter(huc_region %in% Hregions)
+region_sel <- algae_asci_por_trim2 %>% filter(huc_region %in% Hregions)
 
 mapview(region_sel, zcol="huc_region", viewer.suppress=FALSE)
 
 # 03. Select algae Response Variable for GBM ------------------------------
 
-# get metrics
-# algae.metrics<-c("asci")
 
 # PICK RESPONSE VAR FOR MODEL
-hydroDat <- "POR" # can be Annual, Lag1, Lag2, POR
-algaeVar <- quote(MMI.hybrid) # select response var from list above
+algae.metrics<-c("H_ASCI") # response var for model
+hydroDat <- "POR" # dataset, can be Annual, Lag1, Lag2, POR
+algaeVar <- quote(H_ASCI) # select response var from list above
 
 # 04. Setup POR Data for Model ----------------------------------------------------------------
 head(region_sel)
@@ -147,7 +150,7 @@ names(region_sel)
 # need to select and spread data: 
 data_por <- region_sel %>% st_drop_geometry() %>% 
   dplyr::select(StationID, SampleID_old, HUC_12, ID, comid_ffc, comid_algae,
-                sampledate, YYYY, MMI.hybrid, huc_region, CEFF_type,
+                sampledate, YYYY, H_ASCI, huc_region, CEFF_type,
                 metric, status_code 
   ) %>% 
   # need to spread the metrics wide
@@ -156,23 +159,22 @@ data_por <- region_sel %>% st_drop_geometry() %>%
          CEFF_type = as.factor(CEFF_type)) %>% 
   as.data.frame()
 
-names(data_por) ## remove huc_region - last column - 48 here - giving error in brt as no variation
-
-data_por <- data_por[,-36]
 # check how many NAs per col
 #summary(data_por)
-dim(data_por) # 167   36
+dim(data_por) #165   35
 data_names <- names(data_por)
-data_names
+
 # remove cols that have more than 70% NA
 data_por <- data_por[, which(colMeans(!is.na(data_por)) > 0.7)]
 dim(data_por)
-names(data_por)
-
+data_por
 # find the cols that have been dropped
 setdiff(data_names, names(data_por))
 
 # seems SP_Dur is largely NA, only col that was dropped - yep!
+
+# remove rows that have more than 70% NA
+data_por <- data_por[which(rowMeans(!is.na(data_por))>0.7),]
 
 # 05. Split Train/Test Data -------------------------------------------------------------------
 
@@ -196,7 +198,7 @@ data_por_test <- testing(data_por_split) %>%
 
 # double check cols are what we want
 names(data_por_train)
-
+data_por_train
 # 06. GBM.STEP MODEL  ------------------------------------------------------------
 
 # set up tuning params
@@ -208,7 +210,7 @@ hyper_grid <- expand.grid(
 )
 
 # double check and view
-# hyper_grid <- hyper_grid[-c(3,12),] ## gbm did not work - data too small
+# hyper_grid <- hyper_grid[-c(2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18),] ## gbm did not work - data too small
 hyper_grid
 # load the GBM.step function (requires dismo and function loaded)
 gbm_fit_step <- function(
@@ -235,7 +237,7 @@ gbm_fit_step <- function(
 }
 
 # 07. RUN GBM.STEP WITH PURRR ---------------------------------------------
-# rlang::last_error()
+
 # use PURRR: this part can take awhile...get some coffee
 hyper_grid$dev_explained <-purrr::pmap_dbl(
   hyper_grid,
@@ -246,9 +248,7 @@ hyper_grid$dev_explained <-purrr::pmap_dbl(
     bag.fraction = ..4,
     data = data_por_train) # CHECK AND CHANGE!!
 )
-head(data_por_train)
-dim(data_por_train)
-warnings()
+
 # 08. VIEW AND SAVE MODEL RESULTS -----------------------------------------
 
 # look at results:

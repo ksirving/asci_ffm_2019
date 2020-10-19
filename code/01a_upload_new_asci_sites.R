@@ -35,7 +35,7 @@ setwd("/Users/katieirving/Documents/git/asci_ffm_2019")
 
 load("input_data/00_SOC_all_asci_sites.RData") ## algae4
 algae_new <- algae4
-dim(algae_new) ## 2519
+dim(algae_new) ## 2522
 head(algae_new)
 
 

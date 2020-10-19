@@ -36,16 +36,35 @@ load(file="output_data/1a_new_algae_clean.RData") # algae_v2
 names(algae_v2)
 algae_v2 <- algae_v2 %>% rename(StationID = StationCode)
 
-new_algae_codes <- unique(algae_v2$StationID)
-algae_codes <- unique(algae_asci_por_trim$StationID)
 
-sum(new_algae_codes %in% algae_codes) ## 235
+new_algae_codes <- unique(algae_v2$StationID)
+length(new_algae_codes) ## 2320
+algae_codes <- unique(algae_asci_por_trim$StationID)
+length(algae_codes) ## 231
+# 
+# sum(new_algae_codes %in% algae_codes) ## 229
+head(algae_v2)
+dim(algae_v2)
+dim(algae_asci_por_trim)
+# algae_samples_old <- unique(algae_asci_por_trim$SampleID_old)
+# algae_samples_new <- unique(algae_v2$SampleID)
+# sum(algae_samples_new %in% algae_samples_old)
+# names(algae_asci_por_trim)
+?distinct
+### reduce new asci to sites paired
+
+algae_v2 <- algae_v2 %>%
+  filter(StationID %in% algae_codes) %>%
+  distinct(StationID, .keep_all=T)
+
+dim(algae_v2) ## 229
 
 ## join new asci values
-algae_asci_por_trim2 <- left_join(algae_asci_por_trim, algae_v2, by="StationID")
+
+algae_asci_por_trim2 <- inner_join(algae_asci_por_trim, algae_v2, by="StationID")
 algae_asci_por_trim2
 
-algae_asci_por2 <- left_join(algae_asci_por, algae_v2, by="StationID")
+algae_asci_por2 <- inner_join(algae_asci_por, algae_v2, by="StationID")
 algae_asci_por2
 
 save(algae_asci_por_trim2,file= "output_data/05_selected_algae_ascii_por_trim2.rda")
@@ -63,7 +82,7 @@ mapviewOptions(homebutton = FALSE, basemaps=basemapsList, viewer.suppress = FALS
 ## KEEP ALL REGIONS
 
 # make a simpler layer for mapping
-algae_asci_sites <- algae_asci_por_trim %>% 
+algae_asci_sites <- algae_asci_por_trim2 %>% 
   dplyr::distinct(StationID, ID, .keep_all = TRUE)
 
 # if selecting by a specific region use region select
@@ -73,26 +92,28 @@ table(algae_asci_sites$huc_region)
 modname <- "all_ca_ffc_only"
 #Hregions <- c(modname) # set a region or regions
 Hregions <- c("central_valley", "great_basin", "north_coast", "south_coast")
+dim(algae_asci_por_trim)
 
 # now filter data to region(s) of interest
-region_sel <- algae_asci_por_trim %>% filter(huc_region %in% Hregions)
-names(region_sel)
+
+region_sel <- algae_asci_por_trim2 %>% filter(huc_region %in% Hregions)
 region_sel <- separate(region_sel, col = sampledate , into=c("YYYY", "MM", "DD"), remove = F)
+
 #mapview(region_sel, zcol="huc_region", viewer.suppress=FALSE)
 
 # 03. Select algae Response Variable for GBM ------------------------------
 
 # get metrics
-algae.metrics<-c("MMI.hybrid") # response var for model
+algae.metrics<-c("H_ASCI") # response var for model
 hydroDat <- "POR" # dataset, can be Annual, Lag1, Lag2, POR
-algaeVar <- quote(MMI.hybrid) # select response var from list above
+algaeVar <- quote(H_ASCI) # select response var from list above
 
 # 04. Setup POR Data for Model ----------------------------------------------------------------
-
+names(region_sel)
 # need to select and spread data: 
 data_por <- region_sel %>% st_drop_geometry() %>% 
   dplyr::select(StationID, SampleID_old, HUC_12, ID, comid_ffc, comid_algae,
-                sampledate, YYYY, MMI.hybrid, huc_region, CEFF_type,
+                sampledate, YYYY, H_ASCI, huc_region, CEFF_type,
                 metric, status_code 
   ) %>% 
   # need to spread the metrics wide
@@ -102,8 +123,9 @@ data_por <- region_sel %>% st_drop_geometry() %>%
   as.data.frame()
 
 # check how many NAs per col
-dim(data_por) ## 270
+dim(data_por) ## 268
 data_names <- names(data_por) # save colnames out
+head(data_por)
 
 # remove cols that have more than 70% NA
 data_por <- data_por[, which(colMeans(!is.na(data_por)) > 0.7)]
@@ -113,6 +135,10 @@ dim(data_por)
 setdiff(data_names, names(data_por))
 
 # seems SP_Dur is largely NA - i agree!
+
+# remove rows that have more than 70% NA
+data_por <- data_por[which(rowMeans(!is.na(data_por))>0.7),]
+dim(data_por)
 
 # 05. Split Train/Test Data -------------------------------------------------------------------
 
