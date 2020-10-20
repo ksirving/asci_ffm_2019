@@ -203,14 +203,15 @@ data_por_train
 
 # set up tuning params
 hyper_grid <- expand.grid(
-  shrinkage = c(0.001, 0.003, 0.005), 
+  shrinkage = c(0.001, 0.003, 0.005, 0.0001), 
   interaction.depth = c(5), 
   n.minobsinnode = c(3, 5, 10), 
-  bag.fraction = c(0.75, 0.8) 
+  bag.fraction = c(0.75, 0.8, 0.5) 
 )
 
 # double check and view
-hyper_grid <- hyper_grid[-c(1:17),] ## gbm did not work - data too small
+hyper_grid <- hyper_grid[c(4,16),] ## gbm did not work - data too small
+
 hyper_grid
 # load the GBM.step function (requires dismo and function loaded)
 gbm_fit_step <- function(

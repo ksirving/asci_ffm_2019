@@ -36,6 +36,8 @@ ca_sp_regions <- read_sf("input_data/spatial/umbrella_sp_regions.shp", as_tibble
 load(file="output_data/04a_selected_algae_ascii_ffm_ann_trim.rda")
 load(file="output_data/04a_selected_algae_asci_ffm_ann.rda")
 
+
+
 # set background basemaps/default options:
 basemapsList <- c("Esri.WorldTopoMap", "Esri.WorldImagery","Esri.NatGeoWorldMap",
                   "OpenTopoMap", "OpenStreetMap", 
@@ -113,10 +115,50 @@ library(leaflet)
 # save(algae_asci_ann_trim, file = "output_data/04_selected_algae_asci_ann_trim_w_huc_region.rda")
 
 
+# join new asci values ----------------------------------------------------
+
+## new asci values
+load(file="output_data/1a_new_algae_clean.RData") # algae_v2
+names(algae_v2)
+algae_v2 <- algae_v2 %>% rename(StationID = StationCode)
+
+
+new_algae_codes <- unique(algae_v2$StationID)
+length(new_algae_codes) ## 2320
+algae_codes <- unique(algae_asci_ffm_ann_trim$StationID)
+length(algae_codes) ## 237
+# 
+# sum(new_algae_codes %in% algae_codes) ## 229
+head(algae_v2)
+dim(algae_v2)
+dim(algae_asci_ffm_ann_trim)
+# algae_samples_old <- unique(algae_asci_por_trim$SampleID_old)
+# algae_samples_new <- unique(algae_v2$SampleID)
+# sum(algae_samples_new %in% algae_samples_old)
+
+### reduce new asci to sites paired
+
+algae_v2 <- algae_v2 %>%
+  filter(StationID %in% algae_codes) %>%
+  distinct(StationID, .keep_all=T)
+
+dim(algae_v2) ## 235
+
+## join new asci values
+
+algae_asci_ffm_ann_trim2 <- inner_join(algae_asci_ffm_ann_trim, algae_v2, by="StationID")
+algae_asci_ffm_ann_trim2
+
+algae_asci_ffm_ann2 <- inner_join(algae_asci_ffm_ann_trim, algae_v2, by="StationID")
+algae_asci_ffm_ann2
+
+save(algae_asci_ffm_ann_trim2,file= "output_data/05_selected_algae_ascii_ann_trim2.rda")
+save(algae_asci_ffm_ann2,file= "output_data/05_selected_algae_ascii_ann2.rda")
+
 # 02. Select a Region ---------------------------------------------------------
 
 # make a simpler layer for mapping
-algae_asci_sites <- algae_asci_ffm_ann_trim %>% 
+algae_asci_sites <- algae_asci_ffm_ann_trim2 %>% 
   dplyr::distinct(StationID, ID, .keep_all = TRUE)
 
 # if selecting by a specific region use region select
@@ -125,10 +167,10 @@ table(algae_asci_sites$huc_region.x)
 
 modname <- "all_ca_ffc_only"   # or "all_ca_ffc_only"
 # Hregions <- c(modname) # set a region or regions
-names(algae_asci_ffm_ann_trim)
+names(algae_asci_ffm_ann_trim2)
 Hregions <- c("central_valley", "great_basin", "north_coast", "south_coast")
 # now filter data to region(s) of interest
-region_sel <- algae_asci_ffm_ann_trim %>% filter(huc_region.x %in% Hregions)
+region_sel <- algae_asci_ffm_ann_trim2 %>% filter(huc_region.x %in% Hregions)
 region_sel
 mapview(region_sel, zcol="huc_region", viewer.suppress=FALSE)
 
@@ -139,7 +181,7 @@ mapview(region_sel, zcol="huc_region", viewer.suppress=FALSE)
 
 # PICK RESPONSE VAR FOR MODEL
 hydroDat <- "ANN" # can be Annual, Lag1, Lag2, POR
-algaeVar <- quote(MMI.hybrid) # select response var from list above
+algaeVar <- quote(H_ASCI) # select response var from list above
 
 # 04. Setup ANN Data for Model ----------------------------------------------------------------
 names(region_sel)
@@ -147,7 +189,7 @@ names(region_sel)
 data_ann <- region_sel %>% st_drop_geometry() %>% 
   distinct(SampleID_old.x, ID, ffm_metric, YYYY, .keep_all = TRUE) %>% 
   dplyr::select(StationID, SampleID_old.x, HUC_12, ID, comid, NHDV2_COMID,
-                YYYY, MM, DD, MMI.hybrid, huc_region.x, CEFF_type, gage_id_c,
+                YYYY, MM, DD,H_ASCI, huc_region.x, CEFF_type, gage_id_c,
                 ffm_metric, ffm_value) %>% 
   # need to spread the metrics wide
   pivot_wider(names_from = ffm_metric, values_from = ffm_value) %>%  #values_fn = list(ffm_value = length)) %>% 
@@ -170,6 +212,9 @@ setdiff(data_names, names(data_ann))
 # [1] "FA_Dur"      "FA_Mag"      "FA_Tim"      "Peak_Tim_2"  "Peak_Dur_2" 
 # [6] "Peak_Fre_2"  "NA"          "Peak_Tim_5"  "Peak_Dur_5"  "Peak_Fre_5" 
 # [11] "Peak_Tim_10" "Peak_Dur_10" "Peak_Fre_10"
+
+# remove rows that have more than 70% NA
+data_ann <- data_ann[which(rowMeans(!is.na(data_ann))>0.7),]
 
 # 05. Make Train Data -------------------------------------------------------------------
 

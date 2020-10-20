@@ -33,8 +33,11 @@ load("output_data/02_selected_nhd_mainstems_gages.rda") # mainstems_all
 ca_sp_regions <- read_sf("input_data/spatial/umbrella_sp_regions.shp", as_tibble = T) %>% st_transform(4326)
 
 # load updated data w HUC_regions: trim untrimmed
-load(file="output_data/04a_selected_algae_ascii_ffm_ann_trim.rda")
-load(file="output_data/04a_selected_algae_asci_ffm_ann.rda")
+# load(file="output_data/04a_selected_algae_ascii_ffm_ann_trim.rda")
+# load(file="output_data/04a_selected_algae_asci_ffm_ann.rda")
+
+load(file="output_data/05_selected_algae_ascii_ann_trim2.rda") ## algae_asci_ffm_ann_trim2
+load(file= "output_data/05_selected_algae_ascii_ann2.rda") ## algae_asci_ffm_ann2
 
 # set background basemaps/default options:
 basemapsList <- c("Esri.WorldTopoMap", "Esri.WorldImagery","Esri.NatGeoWorldMap",
@@ -45,11 +48,11 @@ mapviewOptions(homebutton = FALSE, basemaps=basemapsList, viewer.suppress = FALS
 # 01a. Add Regions --------------------------------------------------
 
 # # check crs:
-st_crs(algae_asci_ffm_ann_trim)
+st_crs(algae_asci_ffm_ann_trim2)
 st_crs(ca_sp_regions)
 
 # # join with regions and add huc_region, make sure both df are in 4326
-algae_asci_ffm_ann_trim <- st_join(algae_asci_ffm_ann_trim, left = TRUE, ca_sp_regions["huc_region"])
+algae_asci_ffm_ann_trim <- st_join(algae_asci_ffm_ann_trim2, left = TRUE, ca_sp_regions["huc_region"])
 names(algae_asci_ffm_ann_trim)
 # ?separate
 # ## format date column to match BMI 
@@ -62,7 +65,7 @@ names(algae_asci_ffm_ann_trim)
 # # make a simpler layer for just editing:
 algae_asci_sites <- algae_asci_ffm_ann_trim %>%
   dplyr::distinct(StationID, ID, .keep_all = TRUE)
-length(unique(algae_asci_sites$StationID)) # 237
+length(unique(algae_asci_sites$StationID)) # 235
 # 
 # # view and update w mapedit
 mapview(algae_asci_sites, col.regions="orange") + mapview(ca_sp_regions)
@@ -125,7 +128,7 @@ table(algae_asci_sites$huc_region.x)
 
 modname <- "north_coast"   # or "all_ca_ffc_only"
 Hregions <- c(modname) # set a region or regions
-names(algae_asci_ffm_ann_trim)
+names(algae_asci_ffm_ann_trim2)
 # Hregions <- c("central_valley", "great_basin", "north_coast", "south_coast")
 # now filter data to region(s) of interest
 region_sel <- algae_asci_ffm_ann_trim %>% filter(huc_region.x %in% Hregions)
@@ -139,7 +142,7 @@ mapview(region_sel, zcol="huc_region.x", viewer.suppress=FALSE)
 
 # PICK RESPONSE VAR FOR MODEL
 hydroDat <- "ANN" # can be Annual, Lag1, Lag2, POR
-algaeVar <- quote(MMI.hybrid) # select response var from list above
+algaeVar <- quote(H_ASCI) # select response var from list above
 
 # 04. Setup ANN Data for Model ----------------------------------------------------------------
 names(region_sel)
@@ -147,7 +150,7 @@ names(region_sel)
 data_ann <- region_sel %>% st_drop_geometry() %>% 
   distinct(SampleID_old.x, ID, ffm_metric, YYYY, .keep_all = TRUE) %>% 
   dplyr::select(StationID, SampleID_old.x, HUC_12, ID, comid, NHDV2_COMID,
-                YYYY, MM, DD, MMI.hybrid, huc_region.x, CEFF_type, gage_id_c,
+                YYYY, MM, DD, H_ASCI, huc_region.x, CEFF_type, gage_id_c,
                 ffm_metric, ffm_value) %>% 
   # need to spread the metrics wide
   pivot_wider(names_from = ffm_metric, values_from = ffm_value) %>%  #values_fn = list(ffm_value = length)) %>% 
@@ -157,7 +160,9 @@ data_ann <- region_sel %>% st_drop_geometry() %>%
 
 # check how many NAs per col
 dim(data_ann)
+head(data_ann)
 names(data_ann)
+data_ann <- data_ann[,-35] ## femove NA column
 data_names <- names(data_ann) # save colnames out
 
 # remove cols that have more than 70% NA
@@ -167,8 +172,9 @@ dim(data_ann)
 # find the cols that have been dropped
 setdiff(data_names, names(data_ann))
 
-# [1] "Peak_Tim_2" "Peak_Dur_2" "Peak_Fre_2" "NA"         "Peak_Tim_5"
-# [6] "Peak_Dur_5" "Peak_Fre_5"
+# [1] "FA_Dur"      "FA_Mag"      "FA_Tim"      "Peak_Tim_2"  "Peak_Dur_2" 
+# [6] "Peak_Fre_2"  "NA"          "Peak_Tim_5"  "Peak_Dur_5"  "Peak_Fre_5" 
+# [11] "Peak_Tim_10" "Peak_Dur_10" "Peak_Fre_10"
 
 # 05. Make Train Data -------------------------------------------------------------------
 
@@ -188,14 +194,14 @@ names(data_ann_train)
 
 # set up tuning params
 hyper_grid <- expand.grid(
-  shrinkage = c(0.001, 0.003, 0.005), 
+  shrinkage = c(0.001, 0.003, 0.005, 0.0001), 
   interaction.depth = c(5), 
   n.minobsinnode = c(3, 5, 10), 
   bag.fraction = c(0.75, 0.8) 
 )
 
 # double check and view
-hyper_grid <- hyper_grid[-c(2:3, 9,12, 15,18),] ## gbm did not work - data too small
+hyper_grid <- hyper_grid[-c(3,7,8,9,12,15,19,21,22,23,24),] ## gbm did not work - data too small
 hyper_grid
 # load the GBM.step function (requires dismo and function loaded)
 gbm_fit_step <- function(
