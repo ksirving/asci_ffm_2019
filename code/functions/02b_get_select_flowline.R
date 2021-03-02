@@ -15,7 +15,7 @@ library(lubridate)
 library(beepr) # to tell us when stuff is done
 
 
-devtools::install_github("USGS-R/nhdplusTools", force=T)
+# devtools::install_github("USGS-R/nhdplusTools", force=T)
 library(nhdplusTools)
 
 # 01. Load Data ---------------------------------------------------------------
@@ -50,10 +50,11 @@ sel_algae_station_gages_h12 <- st_transform(sel_algae_station_gages_h12, crs = 3
 sel_algae_gages_asci <- st_transform(sel_algae_gages_asci, crs = 3310) # use CA Teale albs metric
 sel_gages_algae <- st_transform(sel_gages_algae, crs=3310)
 head(sel_algae_station_gages_h12)
+
 # Create dataframe for looking up COMIDS (here use all stations)
 algae_segs <- sel_algae_station_gages_h12 %>%
   select(StationCode, Longitude, Latitude, comid) %>%
-  rename()
+  rename(COMID_gage = comid) %>%
   distinct(StationCode, .keep_all = TRUE)
 head(algae_segs)
 # compare with raw COMIDS to see how many match:
@@ -62,15 +63,15 @@ head(algae_segs)
 # add in COMID from algae_comid (nhdtools)
 algae_segs <- left_join(algae_segs, algae_comids, by="StationCode")
 str(algae_segs)
-algae_segs$COMID_algae <- as.numeric(algae_segs$COMID_algae)
-# algae_segs$COMID_algae <- as.numeric(algae_segs$COMID_algae)
+algae_segs$COMID_gage <- as.integer(algae_segs$COMID_gage)
+
 
 # finally read merge into one dataset (keep algae comid except where NA, fill with NHD version)
-# algae_segs <- algae_segs %>%
-#   mutate(COMID = case_when(
-#     is.na(COMID_algae) ~ comid,
-#     TRUE ~ COMID_algae
-#   ))
+algae_segs <- algae_segs %>%
+  mutate(COMID = case_when(
+    is.na(COMID_algae) ~ COMID_gage,
+    TRUE ~ COMID_algae
+  ))
 
 
 # # Save out: 
@@ -85,6 +86,7 @@ algae_all_coms <- algae_segs %>%
   group_split(StationCode) %>%
   # set_names(algae_segs$StationCode) %>%
   map(~discover_nhdplus_id(.x$geometry))
+
 # algae_all_coms
 # flatten into single dataframe instead of list
 algae_segs_df <-algae_all_coms %>% flatten_dfc() %>% t() %>%
