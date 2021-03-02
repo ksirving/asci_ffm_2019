@@ -33,16 +33,33 @@ gages_ffc <- read_rds(file = url("https://github.com/ryanpeek/ffm_comparison/raw
 # get all gages and merge for sf
 gages_sf <- read_rds(file = url("https://github.com/ryanpeek/ffm_comparison/raw/main/data/usgs_ca_all_dv_gages.rds"))
 
+# get ref and alt gage lists
+ref_gages <- read_csv("https://raw.githubusercontent.com/ryanpeek/ffm_comparison/main/output/usgs_ref_gages_list.csv")
+alt_gages <- read_csv("https://raw.githubusercontent.com/ryanpeek/ffm_comparison/main/output/usgs_alt_gages_list.csv")
+
+
+# add CEFF type (ALT or REF)
+gages_ffc <- gages_ffc %>% 
+  mutate(CEFF_type = case_when(
+    gages_ffc$gageid %in% ref_gages$site_id ~ "REF",
+    gages_ffc$gageid %in% alt_gages$site_id ~ "ALT"
+  ))
+
 ffc_gages <- inner_join(gages_sf, gages_ffc, by=c("site_id"="gageid")) %>% 
   select(-c(metric:median_in_iqr)) %>% 
   # st_transform(coords=c("lon", "lat"), crs=4326, remove=F) %>%
   # drop San Pablo Bay Gage: (11182030)
   filter(!site_id=="11182030")
 
+# drop intermediate files
+rm(gages_sf, ref_gages, alt_gages, gages_ffc)
+
 st_crs(ffc_gages) <- 4326
 
 # HUC12s
 load("output_data/huc12_sf.rda") # CA h12s
+# check size:
+pryr::object_size(h12)
 
 # algae COMIDs (from Section 04)
 algae_comids <- readRDS("data_output/03_algae_all_stations_comids.rds") ## do this later!
@@ -59,11 +76,9 @@ algae_samples_distinct_asci <- algae_samples_distinct_asci %>%
 algae_stations_distinct <- algae_stations_distinct %>% 
   st_as_sf(coords=c("Longitude", "Latitude"), crs=4326, remove=F)
 
-# check projs are same
-st_crs(algae_clean)
-st_crs(algae_stations_distinct)
-st_crs(ffc_gages)
-st_crs(h12)
+# check projections are same
+st_crs(algae_stations_distinct) == st_crs(ffc_gages)
+st_crs(ffc_gages) == st_crs(h12)
 
 # join COMIDs for algae sites - NEED TO DO THIS!!!!
 # algae_samples_distinct_asci <- left_join(algae_samples_distinct_asci, algae_comids, by=c("StationCode"))
@@ -75,35 +90,41 @@ st_crs(h12)
 # 03. INTERSECT algae & Gages by H12 -----------------------------------
 
 # Add H12 to algae and Gages (adds ATTRIBUTES, retains ALL pts if left=TRUE), using algae DISTINCT STATIONS
-algae_h12 <- st_join(algae_stations_distinct, left = TRUE, h12[c("HUC_12")])
+algae_stations_h12 <- st_join(algae_stations_distinct, 
+                     left = TRUE, h12[c("HUC_12")])
+
+algae_samples_h12 <- st_join(algae_samples_distinct_asci, 
+                     left = TRUE, h12[c("HUC_12")])
 
 # Add H12 to gages
 gages_h12 <- st_join(ffc_gages, left=TRUE, h12[c("HUC_12")]) %>%
   st_drop_geometry()
 
-# now join based on H12: what algae stations share same H12 as USGS gage? (N=1915)
-sel_algae_gages <- inner_join(algae_h12, gages_h12, by="HUC_12") %>% 
-  distinct(StationCode, site_id, .keep_all = T) # n=1000
+dim(gages_h12) ## 958
+
+# now join based on H12: what algae stations share same H12 as USGS gage? n= 958
+sel_algae_stations_gages_h12 <- inner_join(algae_stations_h12, gages_h12, by="HUC_12") %>% 
+  distinct(StationCode, site_id, .keep_all = T) ## 1392
 
 # number of unique HUC12
-length(unique(factor(sel_algae_gages$HUC_12))) # h12=258
+length(unique(factor(sel_algae_stations_gages_h12$HUC_12))) # h12=258
 
 # number of unique gages
-length(unique(sel_algae_gages$site_id)) # gages=420
+length(unique(sel_algae_stations_gages_h12$site_id)) # gages=420
 
 # number of unique algae stations
-length(unique(sel_algae_gages$StationCode)) # algae Stations=841
-names(sel_algae_gages_asci)
-names(sel_algae_gages)
-# make sure these have asci scores: of those in same H12, how many have asci scores? N=1040
-sel_algae_gages_asci <- left_join(sel_algae_gages, st_drop_geometry(algae_samples_distinct_asci), by="StationCode") %>% 
+length(unique(sel_algae_stations_gages_h12$StationCode)) # algae Stations=841
+
+# make sure these have asci scores: of those in same H12, how many have asci scores? N= 1392
+sel_algae_gages_asci <- left_join(sel_algae_stations_gages_h12, st_drop_geometry(algae_samples_distinct_asci), by="StationCode") %>% 
   filter(!is.na(H_ASCI)) %>% 
-  distinct(StationCode, site_id, .keep_all=TRUE)
+  distinct(StationCode, site_id, .keep_all=TRUE) ## no NAs removed
 
 # number of unique?
 length(unique(factor(sel_algae_gages_asci$HUC_12))) # h12=258
 length(unique(sel_algae_gages_asci$site_id)) # gages=420
 length(unique(sel_algae_gages_asci$StationCode)) # algae Stations=841
+
 
 # Get Selected Gages ONLY:  # n=415 (that have asci scores) - none removed
 sel_gages_algae <- ffc_gages %>% 
@@ -162,9 +183,16 @@ m1@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
 
 # save out
 write_rds(sel_h12_algae, file="output_data/03_selected_h12_all_gages.rds")
+write_rds(sel_h12_gages, file="data_output/03_sel_h12_w_ffc_gages.rds")
 write_rds(sel_gages_algae, file="output_data/03_selected_usgs_h12_all_gages.rds")
 write_rds(sel_algae_gages_asci, file="output_data/03_selected_algae_h12_all_gages_asci.rds")
-write_rds(sel_algae_gages, file="output_data/03_selected_algae_h12_all_gages.rds")
+write_rds(sel_algae_stations_gages_h12, file="output_data/03_selected_algae_h12_all_gages.rds")
+
+# write_rds(sel_h12_bmi, file="data_output/02a_sel_h12_w_bmi_csci.rds")
+# write_rds(sel_h12_gages, file="data_output/02a_sel_h12_w_ffc_gages.rds")
+# write_rds(sel_gages_bmi, file="data_output/02a_sel_ffc_gages_by_h12.rds")
+# write_rds(sel_bmi_gages_csci, file="data_output/02a_sel_bmi_stations_csci_by_h12.rds")
+# write_rds(sel_bmi_station_gages_h12, file="data_output/02a_sel_bmi_stations_h12.rds")
 
 # 04. algae COMIDS: GET NEW/MISSING COMIDS --------------------------
 

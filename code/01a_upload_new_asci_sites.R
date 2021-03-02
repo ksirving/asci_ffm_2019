@@ -37,6 +37,7 @@ setwd("/Users/katieirving/Documents/git/asci_ffm_2019")
 algae <- read.csv("input_data/ASCI.1.csv")
 head(algae)
 length(unique(algae$stationcode)) ## 1946
+names(algae)
 
 algae <- algae %>%
   dplyr::select(sampleid, stationcode, sampledate,replicate, assemblage, metric, result) %>%
@@ -81,6 +82,7 @@ sum(sites1$StationCode %in% algae$StationCode) ##1509
 
 sites2 <- read.csv("/Users/katieirving/Documents/data/forKatie/lustations.1.csv")
 dim(sites2)
+
 
 sites2 <- sites2 %>%
   dplyr::select(stationid, latitude, longitude) %>%
