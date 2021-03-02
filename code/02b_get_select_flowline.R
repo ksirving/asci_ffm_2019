@@ -53,7 +53,7 @@ head(sel_algae_station_gages_h12)
 # Create dataframe for looking up COMIDS (here use all stations)
 algae_segs <- sel_algae_station_gages_h12 %>%
   select(StationCode, Longitude, Latitude, comid) %>%
-  rename()
+  rename(COMID_gage = comid) %>%
   distinct(StationCode, .keep_all = TRUE)
 head(algae_segs)
 # compare with raw COMIDS to see how many match:
@@ -83,8 +83,12 @@ algae_all_coms <- algae_segs %>%
   st_transform(4326) %>%
   # slice(1:100) %>%
   group_split(StationCode) %>%
-  # set_names(algae_segs$StationCode) %>%
+  set_names(algae_segs$StationCode) %>%
   map(~discover_nhdplus_id(.x$geometry))
+beepr::beep(2)
+
+algae_all_coms %>% purrr::map_lgl(~ length(.x)>1) %>% table()
+
 # algae_all_coms
 # flatten into single dataframe instead of list
 algae_segs_df <-algae_all_coms %>% flatten_dfc() %>% t() %>%
@@ -95,7 +99,7 @@ algae_segs_df <-algae_all_coms %>% flatten_dfc() %>% t() %>%
 #algae_comids <- algae_segs_df %>% filter(!grepl("^V", StationCode))
 
 # write back out
-write_rds(algae_comids, file="data_output/02b_algae_stations_comids.rds")
+write_rds(algae_comids, file="output_data/02b_algae_stations_comids.rds")
 
 # clean up
 rm(algae_all_coms, algae_segs_df, algae_segs, algae_coms)
@@ -115,6 +119,7 @@ summary(sel_algae_gages_asci$comid) # gage sites
 # Use the GAGE com_list
 coms_list <- map(sel_gages_algae$comid, ~list(featureSource = "comid", featureID=.x))
 length(coms_list)
+
 # check
 coms_list[[200]] # should list feature source and featureID
 
@@ -134,6 +139,8 @@ sel_gages_algae <- sel_gages_algae %>% st_transform(4326)
 # make a single flat layer
 mainstems_flat_us <- mainstemsUS %>%
   set_names(., sel_gages_algae$site_id) %>%
+  map("UM_flowlines") %>% # this needs to match the col from 'mode' on line 67
+  #map2_df(unique(bd_coms_df$comid), ~mutate(.x, orig_comid=.y))
   map2(sel_gages_algae$site_id, ~mutate(.x, gageID=.y))
 
 # bind together
@@ -142,6 +149,7 @@ mainstems_us <- sf::st_as_sf(data.table::rbindlist(mainstems_flat_us, use.names 
 # add direction to gage col
 mainstems_us <- mainstems_us %>% 
   mutate(from_gage = "UM")
+
 
 # rm temp files
 rm(mainstems_flat_us, mainstemsUS)
@@ -155,24 +163,26 @@ mapview(mainstems_us) +
   mapview(sel_gages_algae, col.regions="skyblue", cex=7, color="blue2",
           layer.name="Selected USGS Gages")
 
-# save 
-write_rds(mainstems_us, file = "output_data/02b_sel_gage_mainstems_us.rda")
+write_rds(mainstems_us, file = "output_data/02b_sel_gage_mainstems_us.rds")
+
 
 # 04. GET DOWNSTREAM MAIN FLOWLINES FROM GAGE ------------------------------------------------
 
 # get NHD segments downstream of selected USGS gages, 10 km buffer
 mainstemsDS <- map(coms_list, ~navigate_nldi(nldi_feature = .x,
-                                             mode="downstreamMain",
+                                             mode="DM",
                                              distance_km = 10))
 beep(2)
 
 # check length (for NAs?)
 mainstemsDS %>% 
+  map("DM_flowlines") %>% 
   purrr::map_lgl(~ length(.x)>1) %>% table()
 
 # make a single flat layer
 mainstems_flat_ds <- mainstemsDS %>%
   set_names(., sel_gages_algae$site_id) %>%
+  map("DM_flowlines") %>% # this needs to match the col from 'mode' on line 67
   map2(sel_gages_algae$site_id, ~mutate(.x, gageID=.y))
 
 # bind together
@@ -201,7 +211,7 @@ write_rds(mainstems_ds, file = "output_data/02b_sel_gage_mainstems_ds.rds")
 
 # get diversions
 mainstemsDD <- map(coms_list, ~navigate_nldi(nldi_feature = .x,
-                                             mode="downstreamDiversions",
+                                             mode="DD",
                                              distance_km = 10))
 beep(2)
 
@@ -212,6 +222,7 @@ mainstemsDD %>%
 # make a single flat layer
 mainstems_flat_dd <- mainstemsDD %>%
   set_names(., sel_gages_algae$site_id) %>%
+  map("DD_flowlines") %>% # 
   map2(sel_gages_algae$site_id, ~mutate(.x, gageID=.y))
 
 # bind together
