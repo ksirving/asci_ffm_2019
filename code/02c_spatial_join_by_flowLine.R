@@ -56,7 +56,7 @@ sel_algae_coms_final <-
 sel_algae_coms_final %>% st_drop_geometry() %>% 
   distinct(StationCode, site_id) %>% tally() 
 # if using sel_algae_station_gages_h12: n=839 (but only half have asci?)
-# if using sel_algae_gages_asci: n=478 (but all have asci)
+# if using sel_algae_gages_asci: n=448 (but all have asci)
 
 # distinct algae COMIDs
 sel_algae_coms_final %>% st_drop_geometry() %>% distinct(COMID_algae) %>% tally() # 296 (n=187 w asci)
@@ -179,8 +179,9 @@ sel_algae_coms_final_v2 <- st_as_sf(sel_algae_coms_final_v2, coords=c("longitude
 
 ## Re-Map Final Map -------------------------------------------------------
 
-# not selected algae
+# not selected algae ### filter them later!!!!
 algae_not_selected_v2 <- sel_algae_gages_asci %>% filter(!StationCode %in% sel_algae_coms_final_v2$StationCode) # n=884
+algae_not_selected_v2 <- sel_algae_gages_asci
 
 # get all gages selected (n=226)
 gages_selected_v2 <- sel_gages_algae %>% 
@@ -222,15 +223,16 @@ m2@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
 
 # 06. SAVE OUT ----------------------------------------------------------------
 
-algae_final <- sel_algae_coms_final_v2
+algae_final <- sel_algae_coms_final
+# algae_final <- sel_algae_coms_final_v2 ## change to this one once completed the above
 
-# now look at how many unique asci samples are avail: n=493 unique samples
+# now look at how many unique asci samples are avail: n=243 unique samples
 algae_final %>% st_drop_geometry() %>% distinct(SampleID) %>% tally
 
-# now look at how many unique algae stations: n=275 stations
+# now look at how many unique algae stations: n=243 stations
 algae_final %>% st_drop_geometry() %>% distinct(StationCode) %>% tally
 
-# now look at how many unique USGS gages: n=226
+# now look at how many unique USGS gages: n=216
 algae_final %>% st_drop_geometry() %>% distinct(site_id, .keep_all=TRUE) %>% tally()
 
 # add CEFF alt type
@@ -238,41 +240,48 @@ algae_final %>% st_drop_geometry() %>% distinct(site_id, .keep_all=TRUE) %>% tal
 algae_final %>% 
   st_drop_geometry() %>% 
   distinct(site_id, .keep_all=TRUE) %>% group_by(CEFF_type) %>% tally()
-#ALT         171
-#REF          55
+# ALT         166
+# REF          50
 
 # summary
 summary(algae_final)
 
 
 # load the full dataset from 00
-load("output_data/01_algae_cleaned_all.rda") # all data
-algae_clean <- algae_clean %>% select(StationCode, SampleID, MM:sampledate) %>% distinct(.keep_all=TRUE)
+load("output_data/01a_all_asci_data_clean.RData") # all data
+names(algae4)
+view(algae4)
+algae_clean <- algae4 %>% select(-D_ASCI) %>% 
+  separate(SampleDate, c("YYYY", "MM", "DD")) %>%
+  mutate(MM = as.numeric(MM)) %>%
+  distinct(.keep_all=TRUE)
 
 # join with orig full dataset to add month/date
 algae_final_dat <- left_join(algae_final, algae_clean, by=c("StationCode", "SampleID"))
-
+# view(algae_final_dat)
+# str(algae_final_dat)
 ## need to join with all data to get the month info...
 hist(algae_final_dat$MM) # what months?
 
-# if trim to summer months how many records do we lose? (14% of data)
+# if trim to summer months how many records do we lose? (2% of data)
 algae_final_dat_trim <- algae_final_dat %>% filter(MM>4 & MM<10) 
 hist(algae_final_dat_trim$MM)
 
 # if trimming we lose a few gages: 
 algae_final_dat_trim %>% st_drop_geometry() %>% distinct(site_id, .keep_all=TRUE) %>% count(CEFF_type)
 
-#ALT 156
-#REF 53
+#ALT 165
+#REF 49
 
 ## SAVE OUT
 write_rds(algae_final_dat, file="output_data/02c_selected_final_algae_asci_dat.rds")
 write_rds(algae_final_dat_trim, file="output_data/02c_selected_final_algae_asci_dat_trim.rds")
 
-# save all
+# save all ### save later once checked gages!!!!!
 save(algae_final_dat, algae_not_selected_v2, 
      gages_selected_v2, gages_not_selected_v2,
      hucs_selected_v2, hucs_not_selected_v2,
      add_algae_w_gages, file = "output_data/02c_selected_final_algae_dat_all.rda")
 
+save(algae_final_dat, file = "output_data/02c_selected_final_algae_dat_all.rda")
 
