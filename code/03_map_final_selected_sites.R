@@ -73,8 +73,13 @@ m3@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
 
 library(tmap)
 library(USAboundaries)
-install_data_package()
-install.packages("USAboundariesData")
+
+# devtools::install_github("ropensci/USAboundariesData")
+# 
+# install_data_package()
+# install.packages("USAboundariesData")
+
+
 ca<-us_counties(states="ca")
 load("input_data/spatial/major_rivers_dissolved.rda")
 
@@ -91,7 +96,12 @@ rivs_ca <- st_intersection(rivs, ca) %>%
 # algae stations TMAP --------------------------------------------------------------
 
 # get ALL bug data (distinct stations)
-load("data_output/01_algae_stations_distinct.rda")
+load("output_data/01a_algae_stations_distinct.RData")
+algae_stations_distinct <- na.omit(algae_stations_distinct)
+str(algae_stations_distinct)
+
+algae_stations_distinct <- algae_stations_distinct %>% 
+  st_as_sf(coords=c("Longitude", "Latitude"), crs=4326, remove=F)
 
 # make a tmap
 (map_algae <- map_ca +
@@ -107,7 +117,7 @@ load("data_output/01_algae_stations_distinct.rda")
               legend.show = FALSE, frame = FALSE, title.size = 0.8,
               legend.outside = FALSE, attr.outside = FALSE,
               inner.margins = 0.01, outer.margins = (0.01),
-              fontfamily = "Roboto Condensed", title.position = c(0.65, 0.7)))
+              title.position = c(0.65, 0.7)))
 
 
 # FIRST TRYPTYCH

@@ -101,7 +101,7 @@ stat_box_data <- function(y, upper_limit = max(algae_asci_por_trim$asci, na.rm =
   )
 }
 
-install.packages("extrafont")
+# install.packages("extrafont")
 library(extrafont)
 extrafont::font_import()
 
