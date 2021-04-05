@@ -103,6 +103,7 @@ str(algae_stations_distinct)
 algae_stations_distinct <- algae_stations_distinct %>% 
   st_as_sf(coords=c("Longitude", "Latitude"), crs=4326, remove=F)
 
+### issue with NAs here!!!!!
 # make a tmap
 (map_algae <- map_ca +
     tm_shape(algae_stations_distinct) +
@@ -135,6 +136,7 @@ usgs_gages <- bind_rows(ref_gages, alt_gages) %>%
   select(-geometry) %>% 
   st_as_sf(coords=c("lon", "lat"), remove=FALSE, crs=4326)
 
+### isues with NAs here!!!!!
 # then add gage stations by ref type
 (map_usgs <- map_ca + 
     tm_shape(usgs_gages) +
@@ -190,8 +192,8 @@ tmap::tmap_save(tm = final_triptych,
 # View Final Tally --------------------------------------------------------
 
 # how many unique samples are avail: 
-algae_final_dat %>% st_drop_geometry %>% distinct(SampleID) %>% tally #n=493 samples
-algae_final_dat %>% st_drop_geometry %>% distinct(StationCode) %>% tally #n=275 sites
+algae_final_dat %>% st_drop_geometry %>% distinct(SampleID) %>% tally #n=247 samples
+algae_final_dat %>% st_drop_geometry %>% distinct(StationCode) %>% tally #n=247 sites
 
 # how many unique USGS gages? n=226 (ALT=171, REF=55)
 algae_final_dat %>% st_drop_geometry %>% distinct(site_id, .keep_all=TRUE) %>% count(CEFF_type)

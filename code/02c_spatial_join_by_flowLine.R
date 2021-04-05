@@ -22,7 +22,7 @@ sel_h12_gages <- read_rds("output_data/02a_sel_h12_w_ffc_gages.rds")
 sel_gages_algae <- read_rds("output_data/02a_sel_ffc_gages_by_h12.rds")
 sel_algae_gages_asci <- read_rds("output_data/02a_sel_algae_stations_asci_by_h12.rds")
 sel_algae_station_gages_h12 <- read_rds("output_data/02a_sel_algae_stations_h12.rds")
-str(algae_comids)
+
 # algae COMIDs
 algae_comids <- readRDS("output_data/02b_algae_stations_comids.rds") #%>% 
   # st_drop_geometry() %>% select(StationCode, starts_with("COMID"))
@@ -118,45 +118,65 @@ mapshot(m1, url = paste0(here::here(),"/figs/02c_map_of_selected_algae_gage_h12s
 ## UPDATED 2020-12-14
 # visually inspect the map above, and add/revise sites
 
+# site_adjustments <- read.csv("/Users/katieirving/Documents/git/asci_ffm_2019/input_data/manual_sites_adjustments.csv")
+# names(site_adjustments)
+# gages_to_dropx <- site_adjustments %>%
+#   filter(action == )
 # DROP THESE SITES
-gages_to_drop <- c("11298000","11297500","11316600",
-                   "10344500", "11408870", "11408880",
-                   "11389800", "11403200", "11403200",
-                   "11404300")
-asci_to_drop <- c("801RB8593", "540SJR001")
+gages_to_drop <- c("11404100","10338000","10308794",
+                   "11238270", "11238400", "11238380",
+                   "11118400", "11062800", "11062700",
+                   "11062820", "11058500", "11055350",
+                   "11049590", "11049500", "11065000",
+                   "11046360", "10336645")
+
+asci_to_drop <- c("634R10GNL", "SMC00382", "801SAR110",
+                  "SMC00382", "911COPPER")
 
 # ADD THESE SITES
-gages_to_add <- c("11044800", # De Luz Ck: StationCode: 902S00117 or 902SMROB8
-                  "11063510", # Cajon Ck: algae: SMCR8_327, 801RB8396, 801RB8483
-                  "11123000", # Santa Ynez (site is 12km d/s): 314SYP
-                  "11143200", # Carmel River:307CMU
-                  "11152300", # Salinas R NR Chualar: 309SAC
-                  "11159200", # Corralitos Ck: 305CAW057, 305SCC
-                  "11481000" # Mad Ck, algae site just upstream: 109PS0162
+gages_to_add <- c("11388000", # STONY C BL BLACK BUTTE DAM NR ORLAND CA: algae:504PS0147
+                  "11379500", # ELDER C NR PASKENTA CA (site is 10.4km d/s): "	504PS0083", 634WRD029
+                  "11230215", # SF SAN JOAQUIN R BL HOOPER C NR FLORENCE LAKE CA: 540SSJ200, 
+                  # "	ME-VR2", 402M00002
+                  "11109800" # "	PIRU CREEK BELOW SANTA FELICIA DAM CA": 403R4S193, 403M01522
 )
 asci_to_add <- c(
-  "905SDBDN9", "902S00117", "902SMROB8", "801SAR351",
-  "SMCR8_327", "801RB8396","314SYP","603CE0782",
-  "305PS0034", "113GAR084", "113GAR109", "109PS0162")
+  "504PS0147",
+  "504PS0083",
+  "634WRD029",
+  "540SSJ200",
+  "ME-VR2",
+  "402M00002",
+  "403R4S193",
+  "403M01522"
+ )
 
 # pull out asci sites to add first
 add_algae_asci <- sel_algae_gages_asci %>%
   filter(StationCode %in% asci_to_add) 
-
+head(add_gages)
+dim(add_gages)
 # now add gages that are missing (and one row for each station)
 add_gages <- sel_gages_algae %>% filter(site_id %in% gages_to_add) %>% 
-  bind_rows(., sel_gages_algae %>% filter(site_id=="11044800")) %>% 
-  bind_rows(., sel_gages_algae %>% filter(site_id=="11063510")) %>%
-  bind_rows(., sel_gages_algae %>% filter(site_id=="11063510")) %>%
-  bind_rows(., sel_gages_algae %>% filter(site_id=="11159200")) %>% 
+  bind_rows(., sel_gages_algae %>% filter(site_id=="11388000")) %>% 
+  bind_rows(., sel_gages_algae %>% filter(site_id=="11379500")) %>%
+  bind_rows(., sel_gages_algae %>% filter(site_id=="11230215")) %>%
+  bind_rows(., sel_gages_algae %>% filter(site_id=="11109800")) %>% 
   dplyr::arrange(site_id) %>% 
   # add station codes in same order as gage ID
-  mutate(StationCode = c("902S00117", "902SMROB8", "SMCR8_327","801RB8396", "801RB8483", "314SYP", "307CMU", "309SAC", "305CAW057", "305SCC", "109PS0162"), .before=agency_cd)
-
+  mutate(StationCode = c(   "504PS0147",
+                            "504PS0083",
+                            "634WRD029",
+                            "540SSJ200",
+                            "ME-VR2",
+                            "402M00002",
+                            "403R4S193",
+                            "403M01522"), .before=agency_cd)
+names(sel_algae_gages_asci)
 # filter to algae sites that have this
 add_algae_w_gages <- filter(sel_algae_gages_asci, StationCode %in% add_gages$StationCode) %>% 
   # drop gage info:
-  select(StationCode:longitude, HUC_12, SampleID:COMID) %>% 
+  select(StationCode:Longitude.x, HUC_12, SampleID:COMID_algae) %>% 
   left_join(., st_drop_geometry(add_gages), by="StationCode")
 
 # view added gages w algae
@@ -174,7 +194,7 @@ sel_algae_coms_final_v2 <- sel_algae_coms_final %>%
 # kept exact same number?
 
 # re-make the geom using algae stations
-sel_algae_coms_final_v2 <- st_as_sf(sel_algae_coms_final_v2, coords=c("longitude", "latitude"), crs=4269, remove=FALSE)
+sel_algae_coms_final_v2 <- st_as_sf(sel_algae_coms_final_v2, coords=c("Longitude.x", "Latitude.x"), crs=4269, remove=FALSE)
 
 
 ## Re-Map Final Map -------------------------------------------------------
@@ -223,16 +243,16 @@ m2@map %>% leaflet::addMeasure(primaryLengthUnit = "meters")
 
 # 06. SAVE OUT ----------------------------------------------------------------
 
-algae_final <- sel_algae_coms_final
-# algae_final <- sel_algae_coms_final_v2 ## change to this one once completed the above
+# algae_final <- sel_algae_coms_final
+algae_final <- sel_algae_coms_final_v2 
 
-# now look at how many unique asci samples are avail: n=243 unique samples
+# now look at how many unique asci samples are avail: n=247 unique samples
 algae_final %>% st_drop_geometry() %>% distinct(SampleID) %>% tally
 
-# now look at how many unique algae stations: n=243 stations
+# now look at how many unique algae stations: n=247 stations
 algae_final %>% st_drop_geometry() %>% distinct(StationCode) %>% tally
 
-# now look at how many unique USGS gages: n=216
+# now look at how many unique USGS gages: n=200
 algae_final %>% st_drop_geometry() %>% distinct(site_id, .keep_all=TRUE) %>% tally()
 
 # add CEFF alt type
@@ -240,8 +260,8 @@ algae_final %>% st_drop_geometry() %>% distinct(site_id, .keep_all=TRUE) %>% tal
 algae_final %>% 
   st_drop_geometry() %>% 
   distinct(site_id, .keep_all=TRUE) %>% group_by(CEFF_type) %>% tally()
-# ALT         166
-# REF          50
+# ALT         152
+# REF          48
 
 # summary
 summary(algae_final)
@@ -270,8 +290,8 @@ hist(algae_final_dat_trim$MM)
 # if trimming we lose a few gages: 
 algae_final_dat_trim %>% st_drop_geometry() %>% distinct(site_id, .keep_all=TRUE) %>% count(CEFF_type)
 
-#ALT 165
-#REF 49
+#ALT 151
+#REF 48
 
 ## SAVE OUT
 write_rds(algae_final_dat, file="output_data/02c_selected_final_algae_asci_dat.rds")
@@ -283,5 +303,5 @@ save(algae_final_dat, algae_not_selected_v2,
      hucs_selected_v2, hucs_not_selected_v2,
      add_algae_w_gages, file = "output_data/02c_selected_final_algae_dat_all.rda")
 
-save(algae_final_dat, file = "output_data/02c_selected_final_algae_dat_all.rda")
+# save(algae_final_dat, file = "output_data/02c_selected_final_algae_dat_all.rda")
 

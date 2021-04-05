@@ -18,8 +18,8 @@ ca <- USAboundaries::us_states(states="california")
 # Sites -------------------------------------------------------------------
 
 algae_asci_por_trim <- read_rds("output_data/04_selected_asci_ffm_por_trim.rds")
-length(unique(algae_asci_por_trim$site_id)) #Gages (n=214)
-length(unique(algae_asci_por_trim$StationCode)) # algae Stations (n=238)
+length(unique(algae_asci_por_trim$site_id)) #Gages (n=199)
+length(unique(algae_asci_por_trim$StationCode)) # algae Stations (n=242)
 
 # all data: don't really need this
 load("output_data/02c_selected_final_algae_dat_all.rda")
@@ -27,9 +27,9 @@ load("output_data/02c_selected_final_algae_dat_all.rda")
 # Join Ecoregions to algae sites --------------------------------------------
 
 # get unique algae sites only
-algae_sf <- algae_final_dat %>% distinct(StationCode, .keep_all = TRUE)
+algae_sf <- algae_final_dat %>% distinct(StationCode, .keep_all = TRUE) %>% st_transform(4326)
 algae_sf <- st_join(algae_sf, left = TRUE, eco_revised["US_L3_mod"])
-
+# st_crs(eco_revised)
 # summarize algae stations by region
 table(algae_sf$US_L3_mod)
 

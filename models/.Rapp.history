@@ -1,1 +1,2 @@
 load("/Users/katieirving/Documents/git/asci_ffm_2019/models/06_gbm_mmi.hybrid_por_all_ca_ffc_only_RI_combined.rds")
+load("/Users/katieirving/Documents/git/asci_ffm_2019/models/08_gbm_h_asci.x_por_so_cal_RI_combined.rds")

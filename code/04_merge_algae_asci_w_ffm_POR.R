@@ -66,8 +66,8 @@ algae_asci_por_trim <-  inner_join(st_drop_geometry(algae_final_trim), ffc_trim,
 # n=15936
 
 # see how many distinct sites
-length(unique(algae_asci_por_trim$site_id)) #Gages (n=214)
-length(unique(algae_asci_por_trim$StationCode)) # algae Stations (n=238)
+length(unique(algae_asci_por_trim$site_id)) #Gages (n=199)
+length(unique(algae_asci_por_trim$StationCode)) # algae Stations (n=242)
 
 # gages that may be ref to alt? (25)
 sum(unique(algae_asci_por_trim$site_id) %in% as.character(gages_ref_to_alt$gage))
@@ -81,7 +81,7 @@ write_csv(usgs_ref_to_alt, file="output_data/04_usgs_ref_to_alt_gages_followup.c
 algae_asci_por_trim %>%
   dplyr::distinct(site_id, .keep_all=TRUE) %>% 
   group_by(CEFF_type) %>%  tally() 
-# ALT = 165, REF = 49, same as originally
+# ALT = 151, REF = 48, same as originally
 
 # VISUALIZE ---------------------------------------------------------------
 
@@ -112,9 +112,9 @@ extrafont::font_import()
               aes(x=CEFF_type, y=H_ASCI.y)) + 
     geom_boxplot(aes(fill=status), show.legend = F, notch=TRUE) +
     stat_summary(fun.data=stat_box_data, geom="text", cex=3, hjust=1, vjust=0.9) +
-    labs(y="ASCI", x="CEFF Gage Type", subtitle="asci Score by FFC Alteration Status & Gage Type"))
-    # theme_bw(base_family = "Roboto Condensed") + facet_grid(.~status) +
-    # scale_fill_colorblind())
+    labs(y="ASCI", x="CEFF Gage Type", subtitle="asci Score by FFC Alteration Status & Gage Type"))+
+    facet_grid(.~status) +
+    scale_fill_colorblind()
 
 ggsave(filename = "figs/04_asci_scores_by_ffc_alteration_status_gage_type.png", height = 8, width = 11, units = "in", dpi=300)
 # dev.off()
@@ -125,10 +125,10 @@ ggsave(filename = "figs/04_asci_scores_by_ffc_alteration_status_gage_type.png", 
               aes(x=status, y=H_ASCI.y)) + 
     geom_boxplot(aes(fill=status), show.legend = F, notch = TRUE) +
     stat_summary(fun.data=stat_box_data, geom="text", cex=3, hjust=1, vjust=0.9) +
-    labs(y="asci", x="Alteration Status", subtitle="asci Score by FFC Alteration Status"))#+
+    labs(y="asci", x="Alteration Status", subtitle="asci Score by FFC Alteration Status"))+
     # theme_bw(base_family = "Roboto Condensed") + 
-    #facet_grid(.~status) +
-    # scale_fill_colorblind())
+    facet_grid(.~status) +
+    scale_fill_colorblind()
 
 ggsave(filename = "figs/04_asci_scores_by_ffc_alteration_status.png", height = 8, width = 11, units = "in", dpi=300)
 
@@ -139,3 +139,4 @@ ggsave(filename = "figs/04_asci_scores_by_ffc_alteration_status.png", height = 8
 
 # save the algae_asci_por_trim data
 write_rds(algae_asci_por_trim, file = "output_data/04_selected_asci_ffm_por_trim.rds")
+
