@@ -7,7 +7,7 @@
 
 library(purrr) # for working with lists/loops
 library(glue)
-library(tidylog)
+#library(tidylog)
 #options(tidyverse.quiet = TRUE)
 library(tidyverse) # load quietly
 library(viridis) # colors
@@ -25,12 +25,10 @@ set.seed(321) # reproducibility
 # 01. Load Data ---------------------------------------------------------------
 
 # load updated data:
-load("output_data/05_algae_asci_por_trim_ecoreg.rda")
-# rename for ease of use and drop sf
-algae_asci_por_trim <- algae_asci_por_trim_ecoreg %>% st_drop_geometry()
+asci_ffm<- read_rds("output_data/06_asci_por_trim_final_dataset.rds")
 
 # ecoregions:
-unique(algae_asci_por_trim_ecoreg$US_L3_mod)
+unique(asci_ffm$US_L3_mod)
 
 # set background basemaps/default options:
 basemapsList <- c("Esri.WorldTopoMap", "Esri.WorldImagery",
@@ -48,47 +46,50 @@ mapviewOptions(homebutton = FALSE,
 modname <- "all_ca_ffc_only"   # or "all_ca_ffc_only"
 Hregions <- c(modname) # set a region or regions
 
-algae.metrics<-c("H_ASCI.x") # response var for model
+algae.metrics<-c("H_ASCI") # response var for model
 hydroDat <- "POR" # dataset, can be Annual, Lag1, Lag2, POR
-algaeVar <- quote(H_ASCI.x) # select response var from list above
+algaeVar <- quote(H_ASCI) # select response var from list above
 
 # 03. Setup POR Data for Model ----------------------------------------------------------------
 
-# summarize to look at distrib of -1,0,1
-table(algae_asci_por_trim$status_code)
-summary(algae_asci_por_trim$status_code)
-table(algae_asci_por_trim$status)
-# filter out indeterminate and not_enough_data
-algae_asci_por_filt <- algae_asci_por_trim %>% 
-  filter(status_code %in% c(-1, 1)) # should drop 1336 + 152 rows
-names(algae_asci_por_filt)
+# summarize
+#asci_ffm %>% group_by(metric, alteration_type) %>% tally() %>% 
+asci_ffm %>% st_drop_geometry() %>% 
+  distinct(StationCode, metric, refgage, .keep_all = TRUE) %>% 
+  select(StationCode, refgage, metric, delta_p50, H_ASCI) %>% 
+  group_by(metric, refgage) %>% add_tally() %>% 
+  #View()
+  distinct(refgage, n, .keep_all=TRUE) %>% 
+  ggplot() + geom_col(aes(x=metric, y=n, fill=refgage))
+
 # need to select and spread data: 
-data_por <- algae_asci_por_filt %>% 
+data_por <- asci_ffm %>% st_drop_geometry() %>% 
   dplyr::select(StationCode, SampleID, HUC_12, site_id, 
-                comid_ffc, COMID_algae, CEFF_type,
-                YYYY, H_ASCI.x,
-                metric, status_code
+                comid, COMID_algae, refgage,
+                YYYY, H_ASCI,
+                metric, delta_p50
   ) %>% 
   # need to spread the metrics wide
-  pivot_wider(names_from = metric, values_from = status_code) %>% 
-  mutate(CEFF_type = as.factor(CEFF_type)) %>% 
+  pivot_wider(names_from = metric, values_from = delta_p50) %>% 
+  mutate(refgage = as.factor(refgage)) %>% 
+  # just non-ref sites
+  filter(refgage=="Non-Ref") %>% 
   as.data.frame()
-
+# n=521 obs
 
 # check how many rows/cols: KEEP ALL FOR NOW
-dim(data_por) ## 437  33
+dim(data_por)
 data_names <- names(data_por) # save colnames out
 
 # remove cols that have more than 70% NA
-# data_por <- data_por[, which(colMeans(!is.na(data_por)) > 0.7)]
-# dim(data_por)
-# 
-# # find the cols that have been dropped
-# setdiff(data_names, names(data_por))
-# 
-# # remove rows that have more than 70% NA
+data_por <- data_por[, which(colMeans(!is.na(data_por)) > 0.7)]
+dim(data_por)
+
+# find the cols that have been dropped
+setdiff(data_names, names(data_por))
+# remove rows that have more than 70% NA
 data_por <- data_por[which(rowMeans(!is.na(data_por))>0.7),]
-dim(data_por) ## 405  33
+dim(data_por) # n=292
 
 # 04. RANDOMIZE AND TIDY Data ----------------------------------------------------
 
@@ -98,7 +99,8 @@ data_por <- data_por[random_index, ]
 
 ## USE ALL DATA
 data_por_train <- data_por %>% # use all data
-  dplyr::select({{algaeVar}}, 10:ncol(.)) %>%  # use 12 if not including HUC region and CEFF_type
+  dplyr::select({{algaeVar}}, 10:ncol(.)) %>%  
+  # use 12 if not including HUC region and CEFF_type
   dplyr::filter(!is.na({{algaeVar}})) %>% as.data.frame()
 
 # double check cols are what we want

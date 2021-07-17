@@ -5,8 +5,6 @@
 
 library(tidyverse)
 library(sf)
-#library(leaflet)
-#library(mapview)
 library(viridis) # colors
 library(cowplot)
 library(gbm) # boosted regression trees
@@ -15,32 +13,29 @@ library(pdp)
 library(rlang)
 library(glue)
 #extrafont::loadfonts(quiet=TRUE)
-getwd()
-# GBM evaluation of single points of data
-#library(DALEX)
-#library(ingredients)
 
-# load updated data w regions:
-load("output_data/05_algae_asci_por_trim_ecoreg.rda")
-# rename
-algae_por_trim <- algae_asci_por_trim_ecoreg
+# turn off spherical geometries
+sf_use_s2(FALSE)
+
+# load updated data:
+asci_ffm<- read_rds("output_data/06_asci_por_trim_final_dataset.rds")
 
 
 # simple just sites:
-algae_asci_sites <- algae_por_trim %>% st_drop_geometry() %>% 
+asci_sites <- asci_ffm %>% 
   dplyr::distinct(StationCode, .keep_all = TRUE)
 
 # Load Data --------------------------------------------------------------------
 
 ## VARIABLES:
 # "all_ca_ffc_only"
-# "cent_coast", "north_coast", "sierras", "so_cal" 
-unique(algae_asci_por_trim_ecoreg$US_L3_mod)
+# "central_coast", "north_coast", "sierras", "so_cal" 
+unique(asci_ffm$US_L3_mod)
 
 hydroDat <- "POR"
-modname <- "sierras" # model name 
-plotname <- "Sierra Nevada"  #"All Site Pairs" ## Southern California
-algaeVar <- quote(H_ASCI.x) # select response var
+modname <- "so_cal" # model name 
+plotname <- "All Site Pairs"  #"All Site Pairs" ## Southern California
+algaeVar <- quote(H_ASCI) # select response var
 
 # make pathnames
 (mod_pathname <- glue("07_gbm_final_{tolower(algaeVar)}_{tolower(hydroDat)}_{modname}"))

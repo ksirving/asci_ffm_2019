@@ -1,0 +1,50 @@
+
+ 
+ GBM STEP - version 2.9 
+ 
+Performing cross-validation optimisation of a boosted regression tree model 
+for H_ASCI and using a family of gaussian 
+Using 176 observations and 18 predictors 
+creating 10 initial models of 100 trees 
+
+ folds are unstratified 
+total mean deviance =  0.043 
+tolerance is fixed at  0 
+ntrees resid. dev. 
+100    0.039 
+now adding trees... 
+200   0.0365 
+300   0.035 
+400   0.0341 
+500   0.0335 
+600   0.0332 
+700   0.0331 
+800   0.0331 
+900   0.033 
+1000   0.0331 
+1100   0.0332 
+1200   0.0333 
+1300   0.0334 
+1400   0.0335 
+1500   0.0337 
+1600   0.0338 
+1700   0.0339 
+1800   0.034 
+1900   0.0341 
+2000   0.0343 
+2100   0.0344 
+
+mean total deviance = 0.043 
+mean residual deviance = 0.019 
+ 
+estimated cv deviance = 0.033 ; se = 0.003 
+ 
+training data correlation = 0.763 
+cv correlation =  0.514 ; se = 0.029 
+ 
+elapsed time -  0.09 minutes 
+
+Best parameters for GBM.STEP:
+
+shrinkage	interaction.depth	n.minobsinnode	bag.fraction	dev_explained
+0.003	5	10	0.8	0.23139727278714609

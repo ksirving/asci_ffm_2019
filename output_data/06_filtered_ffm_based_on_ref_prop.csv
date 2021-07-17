@@ -1,0 +1,13 @@
+metric,status,refgage,n,total_count,prop_n
+DS_Dur_WS,indeterminate,Ref,23,211,0.10900473933649289
+DS_Mag_50,indeterminate,Ref,32,211,0.15165876777251186
+DS_Mag_90,indeterminate,Ref,24,211,0.11374407582938388
+DS_Tim,indeterminate,Ref,26,211,0.12322274881516587
+FA_Dur,indeterminate,Ref,2,196,0.01020408163265306
+FA_Mag,indeterminate,Ref,11,211,0.052132701421800945
+FA_Tim,indeterminate,Ref,26,211,0.12322274881516587
+SP_Dur,indeterminate,Ref,11,211,0.052132701421800945
+SP_Mag,indeterminate,Ref,48,211,0.22748815165876776
+SP_ROC,indeterminate,Ref,1,196,0.00510204081632653
+SP_Tim,indeterminate,Ref,52,211,0.24644549763033174
+Wet_BFL_Dur,indeterminate,Ref,39,211,0.1848341232227488

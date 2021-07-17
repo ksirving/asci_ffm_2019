@@ -15,12 +15,11 @@ library(purrr)
 getwd()
 
 # load updated data w regions:
-load("output_data/05_algae_asci_por_trim_ecoreg.rda")
+asci_ffm<- read_rds("output_data/06_asci_por_trim_final_dataset.rds")
 # rename
-algae_por_trim <- algae_asci_por_trim_ecoreg
 
 # simple just sites:
-algae_asci_sites <- algae_por_trim %>% st_drop_geometry() %>% 
+asci_sites <- asci_ffm %>% 
   dplyr::distinct(StationCode, .keep_all = TRUE)
 
 # REGIONS
@@ -33,19 +32,19 @@ plotname <- "Regional"  #"Central Valley" #"All Site Pairs"
 ## ONLY IF YOU NEED MODEL NAMES/DATA
 ## "all_ca_ffc_only", "central_valley", "great_basin", "north_coast", "south_coast", 
 modname <- "regional" # model name 
-algaeVar <- quote(H.ACSI.x) # select response var
+algaeVar <- quote(H.ACSI) # select response var
 # make pathnames
 (plot_savename <- tolower(glue("09_gbm_{as_name(algaeVar)}_{hydroDat}_{modname}")))
 
 # make regional Ri --------------------------------------------------------
 
 ## ONLY IF YOU NEED MODEL NAMES/DATA
-# "all_ca_ffc_only" "cent_coast", "sierras", "so_cal" 
-unique(algae_asci_por_trim_ecoreg$US_L3_mod)
+# "all_ca_ffc_only" "central_coast", "sierras", "so_cal" 
+unique(asci_ffm$US_L3_mod)
 
-modname <- "sierras" # model name 
-algaeVar <- quote(H_ASCI.x) # select response var
-
+modname <- "all_ca_ffc_only" # model name 
+algaeVar <- quote(H_ASCI) # select response var
+hydroDat <- "POR"
 # make pathnames
 (mod_savename <- tolower(paste0("08_gbm_", as_name(algaeVar), "_",hydroDat, "_",modname)))
 
@@ -55,9 +54,41 @@ top_ris <- read_rds(file=paste0("models/", top_ri))
 
 # make sep and combine
 ri_all_ca <- top_ris %>% mutate(model="all_ca")
+
+modname <- "so_cal" # model name 
+algaeVar <- quote(H_ASCI) # select response var
+hydroDat <- "POR"
+# make pathnames
+(mod_savename <- tolower(paste0("08_gbm_", as_name(algaeVar), "_",hydroDat, "_",modname)))
+
+# get the gbm model:
+(top_ri <- list.files(path="models/", pattern = paste0("^", mod_savename,"_RI_combined",".*\\.rds$")))
+top_ris <- read_rds(file=paste0("models/", top_ri))
+
 ri_socal <- top_ris %>% mutate(model="so_cal")
-# ri_ncoast <- top_ris %>% mutate(model="north_coast")
+
+modname <- "central_coast" # model name 
+algaeVar <- quote(H_ASCI) # select response var
+hydroDat <- "POR"
+# make pathnames
+(mod_savename <- tolower(paste0("08_gbm_", as_name(algaeVar), "_",hydroDat, "_",modname)))
+
+# get the gbm model:
+(top_ri <- list.files(path="models/", pattern = paste0("^", mod_savename,"_RI_combined",".*\\.rds$")))
+top_ris <- read_rds(file=paste0("models/", top_ri))
+
 ri_centcoast <- top_ris %>% mutate(model="cent_coast")
+
+modname <- "sierras" # model name 
+algaeVar <- quote(H_ASCI) # select response var
+hydroDat <- "POR"
+# make pathnames
+(mod_savename <- tolower(paste0("08_gbm_", as_name(algaeVar), "_",hydroDat, "_",modname)))
+
+# get the gbm model:
+(top_ri <- list.files(path="models/", pattern = paste0("^", mod_savename,"_RI_combined",".*\\.rds$")))
+top_ris <- read_rds(file=paste0("models/", top_ri))
+
 ri_sierra <- top_ris %>% mutate(model="sierras")
 ## not enough samples for cent valley or cascades
 
@@ -100,7 +131,7 @@ forder <- ri_table %>%
   arrange(desc(model, RI)) %>% 
   mutate(id = row_number()) %>% 
   ungroup() %>% arrange(id) %>% 
-  select(Flow.Metric.Name, id) # get the just the names for ordering things
+  dplyr::select(Flow.Metric.Name, id) # get the just the names for ordering things
 
 
 # Plot & Summarize All RI Combined ----------------------------------------
@@ -139,11 +170,11 @@ ri_table %>%
     title = "Relative Influence of Functional Flow Metrics on asci",
     subtitle = glue::glue("Model {model_name}")
   ) %>%
-  fmt_number(
+  gt::fmt_number(
     columns = vars(RI), decimals = 1, 
     drop_trailing_zeros = T
   )
-
+# ?fmt_number
 # Summary Table Regional -----------------------------------------------------------
 
 model_name <- "EcoRegions"
@@ -160,7 +191,7 @@ ri_table %>%
     title = "Relative Influence of Functional Flow Metrics on asci",
     subtitle = glue::glue("Model {model_name}")
   ) %>%
-  fmt_number(
+  gt::fmt_number(
     columns = vars(so_cal,  cent_coast, sierras, so_cal), decimals = 1,
     drop_trailing_zeros = T
   )
@@ -177,6 +208,9 @@ flowcomponent_colors <- c("Fall pulse flow" = "#F0E442", "Wet-season baseflow" =
                           "Peak flow" = "#404788FF", "Spring recession flow" = "#009E73", 
                           "Dry-season baseflow" = "#D55E00")
 
+plotname <- "All CA"
+modname <- "all_ca_ffc_only"
+(plot_savename <- tolower(glue("09_gbm_{as_name(algaeVar)}_{hydroDat}_{modname}")))
 # Faceted by hydrodat and flow metrics:
 ri_table %>% 
   filter(model=="all_ca", 

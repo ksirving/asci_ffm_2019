@@ -19,15 +19,21 @@ source("code/functions/My.gbm.step.R")
 
 set.seed(321) # reproducibility
 
+# turn off spherical geometries
+sf_use_s2(FALSE)
+
 # 01. Load Data ---------------------------------------------------------------
 
 # load updated data:
-load("output_data/05_algae_asci_por_trim_ecoreg.rda")
-# rename for ease of use and drop sf
-algae_asci_por_trim <- algae_asci_por_trim_ecoreg %>% st_drop_geometry()
+asci_ffm<- read_rds("output_data/06_asci_por_trim_final_dataset.rds")
+names(asci_ffm)
+# get ecoregions and join
+eco_revised <- read_rds("input_data/spatial/ecoregions_combined_L3.rds")
+
+asci_ffm <- st_join(asci_ffm, left = FALSE, eco_revised["US_L3_mod"])
 
 # ecoregions:
-unique(algae_asci_por_trim_ecoreg$US_L3_mod)
+unique(asci_ffm$US_L3_mod.x)
 
 # mainstem rivers
 load("output_data/02b_sel_gage_mainstems_all.rda") # mainstems_all
@@ -42,46 +48,46 @@ mapviewOptions(homebutton = FALSE, basemaps=basemapsList, viewer.suppress = FALS
 # 02. Select a Region ---------------------------------------------------------
 
 # make a simpler layer for mapping
-algae_asci_sites <- algae_asci_por_trim %>% 
+asci_sites <- asci_ffm %>% 
   dplyr::distinct(StationCode, .keep_all = TRUE)
-table(algae_asci_sites$US_L3_mod) # list of unique stations
+table(asci_sites$US_L3_mod.x) # list of unique stations
 
-(ecoregs <- unique(algae_asci_por_trim_ecoreg$US_L3_mod))
+(ecoregs <- unique(asci_ffm$US_L3_mod.x))
 
 # if selecting by a specific region use region select
-table(algae_asci_por_trim$US_L3_mod)
-modname <- "sierras"   # "sierras" 
-(Hregions <- c(ecoregs[3])) # set a region or regions
+# table(asci_ffm$US_L3_mod)
+modname <- "sierras"
+(Hregions <- c(ecoregs[2])) # set a region or regions
 
 # now filter data to region(s) of interest
-region_sel <- algae_asci_por_trim_ecoreg %>% filter(US_L3_mod %in% Hregions)
+region_sel <- asci_ffm %>% filter(US_L3_mod.x %in% Hregions)
 
-mapview(region_sel, zcol="US_L3_mod")
+mapview(region_sel, zcol="US_L3_mod.x")
 
 # 03. Select algae Response Variable for GBM ------------------------------
 
 # get metrics
-algae.metrics<-c("H_ASCI.x")
+algae.metrics<-c("H_ASCI")
 hydroDat <- "POR" # can be Annual, Lag1, Lag2, POR
-algaeVar <- quote(H_ASCI.x) # select response var from list above
+algaeVar <- quote(H_ASCI) # select response var from list above
 
 # 04. Setup POR Data for Model ----------------------------------------------------------------
 
 # filter out indeterminate and not_enough_data
-data_por <- region_sel %>% st_drop_geometry() #%>% 
-#filter(status_code %in% c(-1, 1))
-
-# need to select and spread data: 
-data_por <- data_por %>% 
+data_por <- region_sel %>% st_drop_geometry() %>% 
+  # need to select and spread data: 
   dplyr::select(StationCode, SampleID, HUC_12, site_id, 
-                comid_ffc, COMID_algae, CEFF_type,
-                YYYY, H_ASCI.x,
-                metric, status_code
+                comid, COMID_algae, refgage,
+                YYYY, H_ASCI,
+                metric, delta_p50
   ) %>% 
   # need to spread the metrics wide
-  pivot_wider(names_from = metric, values_from = status_code) %>% 
-  mutate(CEFF_type = as.factor(CEFF_type)) %>% 
+  pivot_wider(names_from = metric, values_from = delta_p50) %>% 
+  mutate(refgage = as.factor(refgage)) %>% 
+  # just non-ref sites
+  filter(refgage=="Non-Ref") %>% 
   as.data.frame()
+# n=53 obs
 
 # check how many rows/cols: KEEP ALL FOR NOW
 library(naniar)
@@ -101,7 +107,7 @@ dim(data_por[, which(colMeans(!is.na(data_por)) > 0.7)]) # after
 #data_por <- data_por[, which(colMeans(!is.na(data_por)) > 0.7)]
 
 # find the cols that have been dropped
-#setdiff(data_names, names(data_por))
+setdiff(data_names, names(data_por))
 
 # remove rows that have more than 70% NA
 dim(data_por)
@@ -119,7 +125,6 @@ data_por_train <- data_por %>% # use all data
   dplyr::select({{algaeVar}}, 10:ncol(.)) %>%  # use 12 if not including HUC region and CEFF_type
   dplyr::filter(!is.na({{algaeVar}})) %>% as.data.frame()
 
-
 # double check cols are what we want
 names(data_por_train)
 
@@ -127,7 +132,7 @@ names(data_por_train)
 
 # set up tuning params
 hyper_grid <- expand.grid(
-  shrinkage = c(0.001, 0.003, 0.005), 
+  shrinkage = c(0.001, 0.003, 0.005, 0.0001), 
   interaction.depth = c(5), 
   n.minobsinnode = c(3, 5, 10), 
   bag.fraction = c(0.75, 0.8) 
@@ -186,7 +191,7 @@ hyper_grid %>%
 (hyper_best <- hyper_grid %>% 
     dplyr::arrange(desc(dev_explained)) %>% #
     head(n=1))
-
+# -0.0209771????
 # write these all out to a file for reference later
 (gbm_file <- paste0("models/07_gbm_final_",tolower(as_name(algaeVar)),"_", tolower(hydroDat), "_", modname, "_hypergrid"))
 
@@ -271,9 +276,9 @@ write_tsv(hyper_best, file = gbm_best_file,
 
 # reassign names for RI outputs and save:
 assign(x = tolower(paste0("gbm_final_", as_name(algaeVar),"_",hydroDat, "_",modname)), value=gbm_fin_out)
-
+# paste0("gbm_final_", as_name(algaeVar),"_",hydroDat, "_",modname)
 # get file name
-(fileToSave <- ls(pattern = paste0("gbm_final_", tolower(as_name(algaeVar)))))
+(fileToSave <- ls(pattern = paste0("gbm_final_", tolower(as_name(algaeVar))))[1])
 
 # save to RDS
 write_rds(x = get(fileToSave), file = paste0("models/07_",fileToSave, "_model.rds"), compress = "gz")
