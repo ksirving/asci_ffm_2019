@@ -18,6 +18,7 @@ ca <- USAboundaries::us_states(states="california")
 # Sites -------------------------------------------------------------------
 
 algae_asci_por_trim <- read_rds("output_data/04_selected_asci_ffm_por_trim.rds")
+
 length(unique(algae_asci_por_trim$site_id)) #Gages (n=199)
 length(unique(algae_asci_por_trim$StationCode)) # algae Stations (n=242)
 
@@ -43,7 +44,7 @@ algae_asci_por_trim_ecoreg <- st_join(algae_asci_por_trim_sf, left = FALSE, eco_
 
 table(algae_asci_por_trim_ecoreg$US_L3_mod)
 
-save(algae_asci_por_trim_ecoreg, file="output_data/05_algae_asci_por_trim_ecoreg.rda")
+save(algae_asci_por_trim_ecoreg, file="output_data/05_algae_asci_por_trim_stream_class.rda")
 
 summary(algae_asci_por_trim_ecoreg)
 

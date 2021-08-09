@@ -81,8 +81,8 @@ st_crs(algae_stations_distinct) == st_crs(ffc_gages)
 st_crs(ffc_gages) == st_crs(h12)
 
 # join COMIDs for algae sites - NEED TO DO THIS!!!!
-# algae_samples_distinct_asci <- left_join(algae_samples_distinct_asci, algae_comids, by=c("StationCode"))
-# summary(algae_samples_distinct_asci$COMID)
+algae_samples_distinct_asci <- left_join(algae_samples_distinct_asci, algae_comids, by=c("StationCode"))
+summary(algae_samples_distinct_asci$COMID)
 # 
 # algae_stations_distinct <- left_join(algae_stations_distinct, algae_comids, by=c("StationCode"))
 # summary(algae_stations_distinct$COMID)

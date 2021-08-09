@@ -7,6 +7,8 @@ library(tidyverse)
 library(sf)
 library(mapview)
 library(tidylog)
+library(sp)
+library(raster)
 
 
 # Gages -------------------------------------------------------------------
@@ -17,6 +19,12 @@ library(tidylog)
 # ref gages only
 gages_ref <- read_csv("input_data/usgs/gages_ref_223_period_record.csv")
 
+# str_class <- gages_ref %>% select(stream_class, gage) %>%
+#   rename(gageid = gage) %>%
+#   mutate(gageid = as.character(gageid)) %>%
+#   distinct()
+# dim(str_class)
+# str(str_class)
 # ffc gage data (alteration)
 ffc_dat <- read_rds(file = url("https://github.com/ryanpeek/ffm_comparison/raw/main/output/ffc_combined/usgs_combined_alteration.rds")) #%>% 
 
@@ -52,8 +60,21 @@ ffc_dat <- read_rds(file = url("https://github.com/ryanpeek/ffm_comparison/raw/m
 # trim data to the USGS stations with algae asci data
 ffc_trim <- ffc_dat %>% filter(gageid %in% algae_final_trim$site_id)
 
+## join stream class by gage id
+# ffc_trim <- left_join(ffc_trim, str_class, by = "gageid") ## not all gages have str class
+
+## upload str_class for state
+str_class_state <- shapefile("input_data/spatial/Final_Classification_9CLASS/Final_Classification_9CLASS.shp")
+str_class_state_df <- as.data.frame(str_class_state)
+
+str_class_state_df <- rename(str_class_state_df, comid = COMID)
+
+## join stream class by comid
+ffc_trim <- left_join(ffc_trim, str_class_state_df, by = "comid") ##
+
 # how many gages distinct?
-ffc_trim %>% distinct(gageid, .keep_all=TRUE) %>% tally()# n=214
+ffc_trim %>% distinct(gageid, .keep_all=TRUE) %>% tally()# n=199
+
 
 
 # JOIN DATA ---------------------------------------------------------------
