@@ -297,6 +297,14 @@ algae_final_dat_trim %>% st_drop_geometry() %>% distinct(site_id, .keep_all=TRUE
 write_rds(algae_final_dat, file="output_data/02c_selected_final_algae_asci_dat.rds")
 write_rds(algae_final_dat_trim, file="output_data/02c_selected_final_algae_asci_dat_trim.rds")
 
+algae_final_dat_trim <- read_rds(file="output_data/02c_selected_final_algae_asci_dat_trim.rds")
+names(algae_final_dat_trim)
+algae_final_dat_trim <- algae_final_dat_trim %>%
+  select(-Latitude.x, -Latitude.y, -Longitude.x, -Longitude.y, -H_ASCI.y) %>%
+  rename(H_ASCI = H_ASCI.x)
+
+write_rds(algae_final_dat_trim, file="output_data/02c_selected_final_algae_asci_dat_trim.rds")
+
 # save all ### save later once checked gages!!!!!
 save(algae_final_dat, algae_not_selected_v2, 
      gages_selected_v2, gages_not_selected_v2,

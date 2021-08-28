@@ -26,7 +26,7 @@ set.seed(321) # reproducibility
 
 # load updated data:
 asci_ffm<- read_rds("output_data/06_asci_por_trim_final_dataset.rds")
-
+head(asci_ffm)
 # ecoregions:
 unique(asci_ffm$US_L3_mod)
 
